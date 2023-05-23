@@ -8,8 +8,7 @@
 # import matplotlib.animation as animation
 
 # import pylsl
-# print(pylsl.__file__)
-# pylsl.__file__
+
 # # Resolve a stream with the name "MyStream"
 # streams = resolve_stream()
 
@@ -20,6 +19,9 @@
 #     print("Stream Type:", stream.type())
 #     print("Stream Source ID:", stream.source_id())
 #     print("Number of Channels:", stream.channel_count())
+#     print("C Format:", stream.channel_format())
+
+
 # print(pylsl.__file__)
 # pylsl.__file__
 
