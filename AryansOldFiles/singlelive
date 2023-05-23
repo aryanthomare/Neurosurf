@@ -1,0 +1,66 @@
+from pylsl import StreamInlet, resolve_stream
+import matplotlib.pyplot as plt
+import numpy as np
+from time import time
+import time as ttt
+import csv
+import winsound
+import matplotlib.animation as animation
+
+
+times = []
+val = []
+
+
+
+# first resolve an EEG stream on the lab network
+print("looking for an EEG stream...")
+streams = resolve_stream('type', 'gyro')
+
+# create a new inlet to read from the stream
+inlet = StreamInlet(streams[0])
+start = time()
+
+#print(start)
+
+
+fig, ax = plt.subplots()
+line1, = ax.plot([], [], label='Line 1')
+
+
+# Initialize the data
+x_data = []
+y_data1 = []
+
+
+# Set the y-axis limits
+ax.set_ylim(-1, 1)
+
+
+def update_plot(frame):
+    sample, timestamp = inlet.pull_sample()
+    global x_data, y_data1  # Declare the variables as global
+
+
+    # Update the data
+    x_data.append(frame)
+    y_data1.append(sample[0])
+
+    
+    # Keep only the 200 most recent values
+    x_data = x_data[-20:]
+    y_data1 = y_data1[-20:]
+
+    
+    line1.set_data(x_data, y_data1)
+
+    ax.relim()
+    ax.autoscale_view()
+
+
+
+# Create the animation
+animation = animation.FuncAnimation(fig, update_plot, frames=range(100), interval=100, blit=True)
+ax.legend()
+# Show the plot
+plt.show()
