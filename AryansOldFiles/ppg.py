@@ -7,7 +7,6 @@ import csv
 import winsound
 from matplotlib.animation import FuncAnimation
 
-
 times = []
 val = []
 
