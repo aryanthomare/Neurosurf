@@ -1,10 +1,12 @@
 import numpy as np
 import math
 import pylsl
+import matplotlib.pyplot as plt
 
 from typing import List
-plot_duration = 10  # how many seconds of data to show
-
+plot_duration = 1000  # how many seconds of data to show
+figure_width = 12  # width of the figure in inches
+figure_height = 6
 class Inlet:
     """Base class to represent a plottable inlet"""
     def __init__(self, info: pylsl.StreamInfo):
@@ -37,21 +39,25 @@ class DataInlet(Inlet):
 
     def __init__(self, info: pylsl.StreamInfo):
         super().__init__(info)
-        # calculate the size for our buffer, i.e. two times the displayed data
         bufsize = (2 * math.ceil(info.nominal_srate() * plot_duration), info.channel_count())
         self.buffer = np.empty(bufsize, dtype=self.dtypes[info.channel_format()])
-        empty = np.array([])
-        print(self.buffer.shape[0])
-        # create one curve object for each channel/line that will handle displaying the data
+        self.fig, self.ax = plt.subplots(figsize=(figure_width, figure_height))
+        self.lines = []
+        for i in range(self.channel_count):
+            line, = self.ax.plot([], [])
+            self.lines.append(line)
+        self.ax.set_ylim(-1, 1)  # Set the y-range
 
     def pull_and_plot(self):
-        # pull the data
-        # _, ts = self.inlet.pull_chunk(timeout=0.0,
-        #                               max_samples=self.buffer.shape[0],
-        #                               dest_obj=self.buffer)
-        vals, ts = self.inlet.pull_chunk(max_samples=self.buffer.shape[0],dest_obj=self.buffer)
-        # ts will be empty if no samples were pulled, a list of timestamps otherwise            
-
+        vals, ts = self.inlet.pull_chunk(max_samples=self.buffer.shape[0], dest_obj=self.buffer)
+        if ts:
+            ts = np.array(ts)  # Convert timestamps to numpy array
+            ts_length = min(len(ts), self.buffer.shape[0])  # Get the minimum length of ts and buffer
+            for i in range(self.channel_count):
+                y_values = self.buffer[:ts_length, i]
+                self.lines[i].set_data(ts[:ts_length], y_values)
+            self.ax.relim()
+            self.ax.autoscale_view()
 
 def main():
     inlets: List[Inlet] = []
@@ -60,12 +66,14 @@ def main():
     for info in streams:
         if info.nominal_srate() != pylsl.IRREGULAR_RATE \
                 and info.channel_format() != pylsl.cf_string:
-            print('Adding data inlet: ' + info.name())
-            inlets.append(DataInlet(info))
+            if info.type() == "Accelerometer":
+                print('Adding data inlet: ' + info.name())
+                inlets.append(DataInlet(info))
         else:
             print('Don\'t know what to do with stream ' + info.name())
 
 
+    plt.ion()  # Enable interactive mode
 
     while True:
         for inlet in inlets:
@@ -73,7 +81,8 @@ def main():
             inlet.pull_and_plot()
             print(inlet.buffer)
 
-
+            plt.pause(0.001)
+            plt.draw()
             
 if __name__ == '__main__':
     main()
