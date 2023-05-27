@@ -22,7 +22,7 @@ class Inlet:
         self.name = info.name()
         self.channel_count = info.channel_count()
 
-    def pull_and_plot(self, plot_time: float):
+    def pull_and_plot(self):
         """Pull data from the inlet and add it to the plot.
         :param plot_time: lowest timestamp that's still visible in the plot
         :param plt: the plot the data should be shown on
@@ -41,21 +41,16 @@ class DataInlet(Inlet):
         bufsize = (2 * math.ceil(info.nominal_srate() * plot_duration), info.channel_count())
         self.buffer = np.empty(bufsize, dtype=self.dtypes[info.channel_format()])
         empty = np.array([])
+        print(self.buffer.shape[0])
         # create one curve object for each channel/line that will handle displaying the data
 
-    def pull_and_plot(self, plot_time):
+    def pull_and_plot(self):
         # pull the data
-        _, ts = self.inlet.pull_chunk(timeout=0.0,
-                                      max_samples=self.buffer.shape[0],
-                                      dest_obj=self.buffer)
-        # ts will be empty if no samples were pulled, a list of timestamps otherwise
-        if ts:
-            ts = np.asarray(ts)
-            y = self.buffer[0:ts.size, :]
-            this_x = None
-            old_offset = 0
-            new_offset = 0
-            
+        # _, ts = self.inlet.pull_chunk(timeout=0.0,
+        #                               max_samples=self.buffer.shape[0],
+        #                               dest_obj=self.buffer)
+        vals, ts = self.inlet.pull_chunk(max_samples=self.buffer.shape[0],dest_obj=self.buffer)
+        # ts will be empty if no samples were pulled, a list of timestamps otherwise            
 
 
 def main():
@@ -63,18 +58,22 @@ def main():
     print("looking for streams")
     streams = pylsl.resolve_streams()
     for info in streams:
-        if info.type() == 'Markers':
-            if info.nominal_srate() != pylsl.IRREGULAR_RATE \
-                    or info.channel_format() != pylsl.cf_string:
-                print('Invalid marker stream ' + info.name())
-            print('Adding marker inlet: ' + info.name())
-            #inlets.append(MarkerInlet(info))
-        elif info.nominal_srate() != pylsl.IRREGULAR_RATE \
+        if info.nominal_srate() != pylsl.IRREGULAR_RATE \
                 and info.channel_format() != pylsl.cf_string:
             print('Adding data inlet: ' + info.name())
             inlets.append(DataInlet(info))
         else:
             print('Don\'t know what to do with stream ' + info.name())
 
+
+
+    while True:
+        for inlet in inlets:
+            print(inlet.name)
+            inlet.pull_and_plot()
+            print(inlet.buffer)
+
+
+            
 if __name__ == '__main__':
     main()
