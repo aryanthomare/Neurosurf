@@ -42,8 +42,9 @@ class DataInlet(Inlet):
 
     def __init__(self, info: pylsl.StreamInfo):
         super().__init__(info)
-        bufsize = (2 * math.ceil(info.nominal_srate() * plot_duration), info.channel_count())
-        self.buffer = np.empty(bufsize, dtype=self.dtypes[info.channel_format()])
+        self.all_data = np.zeros((1, info.channel_count()))
+        #bufsize = (2 * math.ceil(info.nominal_srate() * plot_duration), info.channel_count())
+        #self.buffer = np.empty(bufsize, dtype=self.dtypes[info.channel_format()])
         self.fig, self.ax = plt.subplots(figsize=(figure_width, figure_height))
         self.lines = []
         for i in range(self.channel_count):
@@ -52,19 +53,31 @@ class DataInlet(Inlet):
         self.ax.set_ylim(-1, 1)  # Set the y-range
 
     def pull_and_plot(self):
-        vals, ts = self.inlet.pull_chunk(max_samples=self.buffer.shape[0], dest_obj=self.buffer)
+        vals, ts = self.inlet.pull_chunk()
+        #print(vals)
+
+
+
         if ts:
+
+            new = np.array(vals)
+
+            print(self.all_data.shape,new.shape)
+
+            self.all_data = np.concatenate((self.all_data, new), axis=0)
+
+
             ts = np.array(ts)  # Convert timestamps to numpy array
-            ts_length = min(len(ts), self.buffer.shape[0])  # Get the minimum length of ts and buffer
+            ts_length = self.all_data.shape[1] # Get the minimum length of ts and buffer
             for i in range(self.channel_count):
-                y_values = self.buffer[:ts_length, i]
+                y_values = self.all_data[:ts_length, i]
                 self.lines[i].set_data(ts[:ts_length], y_values)
             self.ax.relim()
             self.ax.autoscale_view()
 
 def main():
     inlets: List[Inlet] = []
-    print("looking for streams")
+    print("looking for streams")  
     streams = pylsl.resolve_streams()
     for info in streams:
         if info.nominal_srate() != pylsl.IRREGULAR_RATE \
@@ -79,10 +92,10 @@ def main():
     plt.ion()  # Enable interactive mode
     while True:
         for inlet in inlets:
-            #print(inlet.name)
-            print(inlet.buffer.shape[0])
+            print(inlet.all_data)
+            #print(inlet.buffer.shape[0])
             inlet.pull_and_plot()
-            print(inlet.buffer)
+            #print(inlet.buffer)
 
             plt.pause(0.001)
             plt.draw()
