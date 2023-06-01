@@ -4,9 +4,11 @@ import pylsl
 import matplotlib.pyplot as plt
 
 from typing import List
-plot_duration = 1000  # how many seconds of data to show
+plot_duration = 1  # how many seconds of data to show
 figure_width = 12  # width of the figure in inches
 figure_height = 6
+
+
 class Inlet:
     """Base class to represent a plottable inlet"""
     def __init__(self, info: pylsl.StreamInfo):
@@ -33,6 +35,7 @@ class Inlet:
         pass
 
 class DataInlet(Inlet):
+    
     """A DataInlet represents an inlet with continuous, multi-channel data that
     should be plotted as multiple lines."""
     dtypes = [[], np.float32, np.float64, None, np.int32, np.int16, np.int8, np.int64]
@@ -74,10 +77,10 @@ def main():
 
 
     plt.ion()  # Enable interactive mode
-
     while True:
         for inlet in inlets:
-            print(inlet.name)
+            #print(inlet.name)
+            print(inlet.buffer.shape[0])
             inlet.pull_and_plot()
             print(inlet.buffer)
 
