@@ -83,12 +83,17 @@ class DataInlet(Inlet):
     def __init__(self, info: pylsl.StreamInfo):
         super().__init__(info)
         self.all_data = np.zeros((1, info.channel_count()))
-        self.last_200_values=self.all_data[:,0]
-        self.last_200_timestamps=self.all_data[:,0]
-        print(self.last_200_timestamps)
-        print("")
-        print(self.last_200_values)
-        self.pddf = pd.DataFrame({'timestamps': self.last_200_timestamps, 'Vals':self.last_200_values})
+        self.fig, self.ax = plt.subplots(figsize=(figure_width, figure_height))
+        self.lines = []
+        for i in range(self.channel_count):
+            line, = self.ax.plot([], [])
+            self.lines.append(line)
+        self.ax.set_ylim(-1, 1)  # Set the y-range
+
+        self.last_200_values=self.all_data[:, -200:]
+
+
+
 
     def sort_by_timestamp(sensor_values, timestamps):
         sorted_indices = np.argsort(timestamps[:, 0])[::-1]  # Sort indices in descending order
@@ -102,51 +107,47 @@ class DataInlet(Inlet):
         vals, ts = self.inlet.pull_chunk()
         #print(vals)
         if ts:
-
             new = np.array(vals)
-
             print(self.all_data.shape,new.shape)
-
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             ts = np.array(ts)  # Convert timestamps to numpy array
-
             self.last_200_values=self.all_data[:, -200:]
             #print(self.last_200_values)
             self.last_200_timestamps = ts[-200:]
                 #print(self.last_200_values[:,x])
-        self.pddf = pd.DataFrame({'timestamps': self.last_200_timestamps, 'Vals':self.last_200_values[:,0]})
-
-
-
-inlets: List[Inlet] = []
-print("looking for streams")  
-streams = pylsl.resolve_streams()
-for info in streams:
-    if info.nominal_srate() != pylsl.IRREGULAR_RATE \
-            and info.channel_format() != pylsl.cf_string:
-        if info.type() == "Accelerometer":
-            print('Adding data inlet: ' + info.name())
-            inlets.append(DataInlet(info))
-    else:
-        print('Dont know what to do with stream ' + info.name())
-
-
-if len(inlets) != 0:
-
-    
-    sns.lineplot(x='timestamps', y='Vals', data=inlets[0].pddf)
-
-
-
-
-
-
-    # else:
-    #     inlets.append(TestInlet())
-    #     while True:
-    #         for inlet in inlets:
-    #             inlet.pull_test_data()
-
-
-
             
+            for i in range(self.channel_count):
+                self.last_200_values=self.all_data[:, -200:]
+                self.last_200_values[:,i]                
+                self.lines[i].set_data(self.last_200_timestamps, self.last_200_values)
+            self.ax.relim()
+            self.ax.autoscale_view()
+
+
+def main():
+    inlets: List[Inlet] = []
+    print("looking for streams")
+    streams = pylsl.resolve_streams()
+    for info in streams:
+        if info.nominal_srate() != pylsl.IRREGULAR_RATE \
+                and info.channel_format() != pylsl.cf_string:
+            if info.type() == "Accelerometer":
+                print('Adding data inlet: ' + info.name())
+                inlets.append(DataInlet(info))
+        else:
+            print('Don\'t know what to do with stream ' + info.name())
+
+
+    plt.ion()  # Enable interactive mode
+
+    while True:
+        for inlet in inlets:
+            print(inlet.name)
+            inlet.pull_and_plot()
+            print(inlet.buffer)
+
+            plt.pause(0.001)
+            plt.draw()
+            
+if __name__ == '__main__':
+    main()

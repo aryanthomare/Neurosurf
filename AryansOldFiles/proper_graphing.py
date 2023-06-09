@@ -50,6 +50,11 @@ class DataInlet(Inlet):
             line, = self.ax.plot([], [])
             self.lines.append(line)
         self.ax.set_ylim(-1, 1)  # Set the y-range
+
+
+
+
+
     def pull_and_plot(self):
         vals, ts = self.inlet.pull_chunk(max_samples=self.buffer.shape[0], dest_obj=self.buffer)
         if ts:
@@ -60,6 +65,9 @@ class DataInlet(Inlet):
                 self.lines[i].set_data(ts[:ts_length], y_values)
             self.ax.relim()
             self.ax.autoscale_view()
+
+
+            
 def main():
     inlets: List[Inlet] = []
     print("looking for streams")
