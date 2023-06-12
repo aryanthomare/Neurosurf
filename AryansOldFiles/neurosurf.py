@@ -5,15 +5,16 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import time
 from typing import List
-import seaborn as sns
 import pandas as pd
+from numpy.fft import fft, ifft
 
 
 plot_duration = 1  # how many seconds of data to show
 figure_width = 12  # width of the figure in inches
 figure_height = 6
 
-view_size=500
+view_size=200
+plt.style.use('dark_background')
 
 class Inlet:
     """Base class to represent a plottable inlet"""
@@ -55,41 +56,46 @@ class TestInlet():
         self.channel_count = 3
         self.all_data = np.zeros((1, self.channel_count))
 
-        self.fig, self.ax = plt.subplots(figsize=(figure_width, figure_height))
+        self.fig, self.ax = plt.subplots(self.channel_count,2,figsize=(figure_width, figure_height))
         self.lines = []
         for i in range(self.channel_count):
-            line, = self.ax.plot([], [])
+            line, = self.ax[i][0].plot([], [])
             self.lines.append(line)
-        self.ax.set_ylim(-1, 1)  # Set the y-range
 
-    def sort_by_timestamp(sensor_values, timestamps):
-        sorted_indices = np.argsort(timestamps[:, 0])[::-1]  # Sort indices in descending order
+        self.all_ts = np.zeros(1)
 
-        sorted_sensor_values = sensor_values[sorted_indices]
+        #self.ax.set_ylim(-1, 1)  # Set the y-range
+    def sort_sensor_data(self,timestamps, sensor_data):
+        # Get the indices that would sort the timestamps array
+        sorted_indices = np.argsort(timestamps, axis=0)
+
+        # Sort the timestamps and sensor data arrays based on the sorted indices
         sorted_timestamps = timestamps[sorted_indices]
+        sorted_sensor_data = sensor_data[sorted_indices]
 
-        return sorted_sensor_values, sorted_timestamps
+        return sorted_timestamps, sorted_sensor_data
         
     def pull_and_plot(self,*fargs):
         n = np.random.randint(1, 6)  # Generate a random number between 1 and 5
         array = np.random.rand(n, 3)  # Create a random array of size n by 3 with values between 0 and 1
+        times = np.zeros(n)
+        for x in range(n):
+            times[x] = time.time()
+
 
         self.all_data = np.concatenate((self.all_data, array), axis=0)
-        #print(self.all_data)
-    
+        self.all_ts = np.concatenate((self.all_ts, times), axis=0)
         self.last_viewsize_values=self.all_data[-view_size:, :]
-        #print(self.last_viewsize_values.shape)
         self.last_viewsize_timestamps = np.array([x for x in range(0,self.last_viewsize_values.shape[0])])
-            #print(self.last_viewsize_values[:,x])
 
-
+        self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
         for i in range(0,self.channel_count):
 
             self.vals=self.last_viewsize_values[:,i]                
             self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
-        self.ax.relim()
-        self.ax.autoscale_view()
-
+            self.ax[i][0].relim()
+            self.ax[i][0].autoscale_view()
+        plt.tight_layout()
 
 
 
@@ -101,30 +107,39 @@ class DataInlet(Inlet):
 
     def __init__(self, info: pylsl.StreamInfo):
         super().__init__(info)
-        self.all_data = np.zeros((1, info.channel_count()))
+        self.normal_rate = info.nominal_srate()
 
-        self.fig, self.ax = plt.subplots(figsize=(figure_width, figure_height))
+        self.all_data = np.zeros((1, info.channel_count()))
+        self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
         self.lines = []
-        for i in range(self.channel_count):
-            line, = self.ax.plot([], [])
-            self.lines.append(line)
-        self.ax.set_ylim(-1.5, 1.5)  # Set the y-range
+        for j in range(2):
+            for i in range(self.channel_count):
+                line, = self.ax[i][j].plot([], [])
+                self.lines.append(line)
 
         self.all_ts = np.zeros(1)
 
-    def sort_by_timestamp(sensor_values, timestamps):
-        sorted_indices = np.argsort(timestamps[:, 0])[::-1]  # Sort indices in descending order
 
-        sorted_sensor_values = sensor_values[sorted_indices]
+        self.starttime = time.time()
+
+
+
+    def sort_sensor_data(self,timestamps, sensor_data):
+        # Get the indices that would sort the timestamps array
+        sorted_indices = np.argsort(timestamps, axis=0)
+
+        # Sort the timestamps and sensor data arrays based on the sorted indices
         sorted_timestamps = timestamps[sorted_indices]
+        sorted_sensor_data = sensor_data[sorted_indices]
 
-        return sorted_sensor_values, sorted_timestamps
+        return sorted_timestamps, sorted_sensor_data
 
     def pull_and_plot(self,*fargs):
         vals, ts = self.inlet.pull_chunk()
-        #print(vals)
-        self.ax.set_ylim(np.amin(self.all_data), np.amax(self.all_data))  # Set the y-range
+        if self.starttime-time.time() > 1:
+            self.starttime = time.time()
 
+        
         if ts:
             new = np.array(vals)
             times = np.array(ts)
@@ -132,26 +147,38 @@ class DataInlet(Inlet):
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             self.all_ts = np.concatenate((self.all_ts, times), axis=0)
 
-              # Convert timestamps to numpy array
             self.last_viewsize_values=self.all_data[-view_size:, :]
-            #print(self.last_viewsize_values)
             self.last_viewsize_timestamps = self.all_ts[-view_size:]
-                #print(self.last_viewsize_values[:,x])
-            # print(self.last_viewsize_timestamps.shape)
-            # print(self.last_viewsize_values.shape)
 
-            #for i in range(0,1):
+            self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
 
+
+
+
+
+            #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
             for i in range(0,self.channel_count):
-                self.vals=self.last_viewsize_values[:,i]                
+                self.vals=self.last_viewsize_values[:,i]               
                 self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
+                #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
 
+                self.ax[i][0].set_ylim(np.amin(self.all_data), np.amax(self.all_data))  # Set the y-range
+                self.ax[i][0].relim()
+                self.ax[i][0].autoscale_view()
 
+                            
 
+                fourier = fft(self.last_viewsize_values)
+                sr  = self.normal_rate
 
-            self.ax.relim()
-            self.ax.autoscale_view()
-
+                N = len(fourier)
+                n = np.arange(fourier)
+                ts = 1.0/sr
+                T = N/sr
+                freq = n/T
+                self.lines[i+3].set_data(freq, np.abs(fourier))
+                self.ax[i][1].relim()
+                self.ax[i][1].autoscale_view()
 
 
 def main():
@@ -172,13 +199,13 @@ def main():
 
 
     plt.ion()  # Enable interactive mode
-
+    
     while True:
         for inlet in inlets:
             inlet.pull_and_plot()
 
-            plt.pause(0.1)
             plt.draw()
-            
+            plt.pause(0.1)
+
 if __name__ == '__main__':
     main()

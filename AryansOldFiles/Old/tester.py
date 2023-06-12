@@ -1,18 +1,24 @@
 import numpy as np
-import math
-import pylsl
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import time
-from typing import List
-import seaborn as sns
-import pandas as pd
 
-# all_data = np.zeros((20, 3))
-# print(all_data,"\n")
-# last_200_values=all_data[:, -200:]
-# print(last_200_values,"\n")
+# # Generate some sample sensor values
+# sensor_values = np.random.rand(1000)
 
-# last_200_timestamps = np.array([x for x in range(0,200)])
-all_ts = np.zeros(1)
-print(all_ts)
+# # Compute the FFT
+# fft_values = np.fft.fft(sensor_values)
+
+# # Compute the magnitudes of the FFT values
+# fft_magnitudes = np.abs(fft_values)
+
+# # Generate the frequencies corresponding to the FFT values
+# freqs = np.fft.fftfreq(len(sensor_values))
+# print(fft_values)
+# # Plot the magnitudes of the FFT values
+# plt.plot(freqs, fft_magnitudes)
+# plt.xlabel('Frequency')
+# plt.ylabel('Magnitude')
+# plt.title('FFT Amplitudes')
+# plt.grid(True)
+# plt.show()
+for j in range2):
+    print(j)
