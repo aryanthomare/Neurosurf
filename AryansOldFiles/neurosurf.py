@@ -7,7 +7,7 @@ import time
 from typing import List
 import pandas as pd
 from numpy.fft import fft, ifft
-
+import csv
 
 plot_duration = 1  # how many seconds of data to show
 figure_width = 12  # width of the figure in inches
@@ -32,6 +32,13 @@ class Inlet:
         # store the name and channel count
         self.name = info.name()
         self.channel_count = info.channel_count()
+        
+    def event_handler_quote_update(message, writer):
+        # print(f"quote update {message}")
+        token = message['token']
+        ltp   = message['ltp']
+        date  = message['exchange_time_stamp']
+        writer.writerow([token, ltp, date])
 
     def pull_and_plot(self):
         """Pull data from the inlet and add it to the plot.
@@ -55,15 +62,18 @@ class TestInlet():
         self.name = "Test"
         self.channel_count = 3
         self.all_data = np.zeros((1, self.channel_count))
-
+        self.start_time = time.time()
         self.fig, self.ax = plt.subplots(self.channel_count,2,figsize=(figure_width, figure_height))
         self.lines = []
-        for i in range(self.channel_count):
-            line, = self.ax[i][0].plot([], [])
-            self.lines.append(line)
-
+        for j in range(2):
+            for i in range(self.channel_count):
+                line, = self.ax[i][j].plot([], [])
+                self.lines.append(line)
+        self.start = time.time()
         self.all_ts = np.zeros(1)
-
+        self.rate = 7
+        self.flag = True
+        self.time =0
         #self.ax.set_ylim(-1, 1)  # Set the y-range
     def sort_sensor_data(self,timestamps, sensor_data):
         # Get the indices that would sort the timestamps array
@@ -76,25 +86,65 @@ class TestInlet():
         return sorted_timestamps, sorted_sensor_data
         
     def pull_and_plot(self,*fargs):
-        n = np.random.randint(1, 6)  # Generate a random number between 1 and 5
-        array = np.random.rand(n, 3)  # Create a random array of size n by 3 with values between 0 and 1
-        times = np.zeros(n)
-        for x in range(n):
-            times[x] = time.time()
+        array = np.zeros((1, 3))  # Create a random array of size n by 3 with values between 0 and 1
+
+
+
+        for x in range(3):
+            value = 10*np.sin(2 * math.pi * 600000 * self.time)
+            self.time += 1 / self.rate
+            array[0][x]=value
+
+        times = np.array([time.time()-self.start_time])
+
+
+
+
+        if self.flag:
+            if time.time()-self.start_time > 5:
+                self.rate = self.all_data.shape[0]/5
+                self.flag = False
+
 
 
         self.all_data = np.concatenate((self.all_data, array), axis=0)
         self.all_ts = np.concatenate((self.all_ts, times), axis=0)
         self.last_viewsize_values=self.all_data[-view_size:, :]
-        self.last_viewsize_timestamps = np.array([x for x in range(0,self.last_viewsize_values.shape[0])])
+        self.last_viewsize_timestamps = self.all_ts[-view_size:]
 
         self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
         for i in range(0,self.channel_count):
+            self.vals=self.last_viewsize_values[:,i]               
+
+            fourier = fft(self.vals)
+
+            sr  = self.rate
+            N = len(fourier)
+            n = np.arange(N)
+            ts = 1.0/sr
+            T = N/sr
+            freq = n/T
+            fft_magnitudes = np.abs(fourier)
+            max_magnitude = np.max(fft_magnitudes)
+            normalized_fft = fft_magnitudes / max_magnitude
+            print(freq)
+
+            self.lines[i+self.channel_count].set_data(freq, normalized_fft)
+            self.ax[i][1].relim()
+            self.ax[i][1].set_xlim(0,125)
+            self.ax[i][1].autoscale_view()
+
+
 
             self.vals=self.last_viewsize_values[:,i]                
             self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
             self.ax[i][0].relim()
             self.ax[i][0].autoscale_view()
+
+
+
+
+
         plt.tight_layout()
 
 
@@ -136,8 +186,7 @@ class DataInlet(Inlet):
 
     def pull_and_plot(self,*fargs):
         vals, ts = self.inlet.pull_chunk()
-        if self.starttime-time.time() > 1:
-            self.starttime = time.time()
+
 
         
         if ts:
