@@ -108,7 +108,7 @@ class DataInlet(Inlet):
     def __init__(self, info: pylsl.StreamInfo):
         super().__init__(info)
         self.normal_rate = info.nominal_srate()
-
+        self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
         self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
         self.lines = []
@@ -159,7 +159,45 @@ class DataInlet(Inlet):
             #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
             for i in range(0,self.channel_count):
                 self.vals=self.last_viewsize_values[:,i]               
+
+
+                fourier = fft(self.vals)
+                sr  = self.normal_rate
+
+                N = len(fourier)
+                n = np.arange(N)
+                ts = 1.0/sr
+                T = N/sr
+                freq = n/T
+                fft_magnitudes = np.abs(fourier)
+                max_magnitude = np.max(fft_magnitudes)
+                normalized_fft = fft_magnitudes / max_magnitude
+
+
+                # filter_frequency = 60  # Specify the frequency you want to filter out
+                # filter_index = np.abs(freq - filter_frequency).argmin()
+                # normalized_fft[filter_index] = 0
+
+                sig_filtered = np.real(np.fft.ifft(normalized_fft))
+
+                self.lines[i+self.channel_count].set_data(freq, normalized_fft)
+                self.ax[i][1].relim()
+                self.ax[i][1].set_xlim(0,125)
+                self.ax[i][1].autoscale_view()
+
+
+
+
+
+
+
+
+
+
+
+
                 self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
+                #self.lines[i].set_data(self.last_viewsize_timestamps, sig_filtered)
                 #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
 
                 self.ax[i][0].set_ylim(np.amin(self.all_data), np.amax(self.all_data))  # Set the y-range
@@ -168,17 +206,6 @@ class DataInlet(Inlet):
 
                             
 
-                fourier = fft(self.last_viewsize_values)
-                sr  = self.normal_rate
-
-                N = len(fourier)
-                n = np.arange(fourier)
-                ts = 1.0/sr
-                T = N/sr
-                freq = n/T
-                self.lines[i+3].set_data(freq, np.abs(fourier))
-                self.ax[i][1].relim()
-                self.ax[i][1].autoscale_view()
 
 
 def main():
