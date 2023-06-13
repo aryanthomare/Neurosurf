@@ -162,13 +162,14 @@ class DataInlet(Inlet):
 
 
                 fourier = fft(self.vals)
-                sr  = self.normal_rate
 
+                sr  = self.normal_rate
                 N = len(fourier)
                 n = np.arange(N)
                 ts = 1.0/sr
                 T = N/sr
                 freq = n/T
+
                 fft_magnitudes = np.abs(fourier)
                 max_magnitude = np.max(fft_magnitudes)
                 normalized_fft = fft_magnitudes / max_magnitude
@@ -196,8 +197,8 @@ class DataInlet(Inlet):
 
 
 
+                # self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
                 self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
-                #self.lines[i].set_data(self.last_viewsize_timestamps, sig_filtered)
                 #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
 
                 self.ax[i][0].set_ylim(np.amin(self.all_data), np.amax(self.all_data))  # Set the y-range

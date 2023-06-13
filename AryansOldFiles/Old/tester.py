@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time
 # # Generate some sample sensor values
 # sensor_values = np.random.rand(1000)
 
@@ -20,5 +20,7 @@ import matplotlib.pyplot as plt
 # plt.title('FFT Amplitudes')
 # plt.grid(True)
 # plt.show()
-for j in range2):
-    print(j)
+now = time.time()
+
+time.sleep(2)
+print(time.time()-now)
