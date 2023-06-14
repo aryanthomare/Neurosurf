@@ -14,6 +14,11 @@ figure_width = 12  # width of the figure in inches
 figure_height = 6
 
 view_size=200
+
+record = True
+
+
+
 plt.style.use('dark_background')
 
 class Inlet:
@@ -32,13 +37,14 @@ class Inlet:
         # store the name and channel count
         self.name = info.name()
         self.channel_count = info.channel_count()
-        
-    def event_handler_quote_update(message, writer):
+
+
+    def message_writer(self,message):
         # print(f"quote update {message}")
-        token = message['token']
-        ltp   = message['ltp']
-        date  = message['exchange_time_stamp']
-        writer.writerow([token, ltp, date])
+        with open('self.filename', 'w', encoding='UTF8') as f:
+
+            writer = csv.writer(f)
+            writer.writerow(message)
 
     def pull_and_plot(self):
         """Pull data from the inlet and add it to the plot.
@@ -48,8 +54,8 @@ class Inlet:
         # We don't know what to do with a generic inlet, so we skip it.
         pass
 
-class TestInlet():
-    def __init__(self):
+class TestInlet(Inlet):
+    def __init__(self,record):
     # create an inlet and connect it to the outlet we found earlier.
     # max_buflen is set so data older the plot_duration is discarded
     # automatically and we only pull data new enough to show it
@@ -74,7 +80,20 @@ class TestInlet():
         self.rate = 7
         self.flag = True
         self.time =0
+        self.filename = f"{self.name}_File_{time.time()}.csv"
+        self.record = record
         #self.ax.set_ylim(-1, 1)  # Set the y-range
+
+
+    
+    def message_writer(self,message):
+        # print(f"quote update {message}")
+        with open(self.filename, 'a', encoding='UTF8',newline='') as f:
+
+            writer = csv.writer(f)
+            writer.writerow(message)
+
+
     def sort_sensor_data(self,timestamps, sensor_data):
         # Get the indices that would sort the timestamps array
         sorted_indices = np.argsort(timestamps, axis=0)
@@ -90,12 +109,25 @@ class TestInlet():
 
 
 
-        for x in range(3):
-            value = 10*np.sin(2 * math.pi * 600000 * self.time)
+        for x in range(self.channel_count):
+            value = 10*np.sin(2 * math.pi * 60* self.time)
+            print(value)
             self.time += 1 / self.rate
             array[0][x]=value
+        
+
+
+
 
         times = np.array([time.time()-self.start_time])
+
+
+
+        if self.record:
+            write=array[0]
+            write.flatten()
+            message = np.concatenate((write, times), axis=0)
+            self.message_writer(message)
 
 
 
@@ -117,7 +149,6 @@ class TestInlet():
             self.vals=self.last_viewsize_values[:,i]               
 
             fourier = fft(self.vals)
-
             sr  = self.rate
             N = len(fourier)
             n = np.arange(N)
@@ -127,11 +158,11 @@ class TestInlet():
             fft_magnitudes = np.abs(fourier)
             max_magnitude = np.max(fft_magnitudes)
             normalized_fft = fft_magnitudes / max_magnitude
-            print(freq)
+
 
             self.lines[i+self.channel_count].set_data(freq, normalized_fft)
             self.ax[i][1].relim()
-            self.ax[i][1].set_xlim(0,125)
+            self.ax[i][1].set_xlim(0,freq[freq.size-1])
             self.ax[i][1].autoscale_view()
 
 
@@ -154,25 +185,29 @@ class DataInlet(Inlet):
     """A DataInlet represents an inlet with continuous, multi-channel data that
     should be plotted as multiple lines."""
     dtypes = [[], np.float32, np.float64, None, np.int32, np.int16, np.int8, np.int64]
-
-    def __init__(self, info: pylsl.StreamInfo):
+    def __init__(self, info: pylsl.StreamInfo,record):
         super().__init__(info)
         self.normal_rate = info.nominal_srate()
         self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
         self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
         self.lines = []
+        self.name = info.type()
         for j in range(2):
             for i in range(self.channel_count):
                 line, = self.ax[i][j].plot([], [])
                 self.lines.append(line)
-
+        self.record = record
         self.all_ts = np.zeros(1)
-
-
+        self.filename = f"{self.name}_File_{time.time()}.csv"
         self.starttime = time.time()
+        
+    def message_writer(self,message):
+        # print(f"quote update {message}")
+        with open(self.filename, 'a', encoding='UTF8',newline='') as f:
 
-
+            writer = csv.writer(f)
+            writer.writerow(message)
 
     def sort_sensor_data(self,timestamps, sensor_data):
         # Get the indices that would sort the timestamps array
@@ -186,12 +221,35 @@ class DataInlet(Inlet):
 
     def pull_and_plot(self,*fargs):
         vals, ts = self.inlet.pull_chunk()
-
-
+        #print("!!!: ",vals,ts)
+        
+        for x in range(len(ts)):
+            ts[x] = ts[x]-self.starttime
         
         if ts:
+
+
+
             new = np.array(vals)
             times = np.array(ts)
+
+            #self.writer = np.concatenate((new, times), axis=1)
+
+            if self.record:
+                combined_array = np.hstack((new, times[:, np.newaxis]))
+
+                #print(combined_array)
+
+
+
+                columns = []
+                for i in range(combined_array.shape[0]):
+                    column = combined_array[i,:]
+                    columns.append(column)
+
+                for each in columns:
+                    self.message_writer(each)
+
 
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             self.all_ts = np.concatenate((self.all_ts, times), axis=0)
@@ -201,11 +259,6 @@ class DataInlet(Inlet):
 
             self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
 
-
-
-
-
-            #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
             for i in range(0,self.channel_count):
                 self.vals=self.last_viewsize_values[:,i]               
 
@@ -223,7 +276,7 @@ class DataInlet(Inlet):
                 max_magnitude = np.max(fft_magnitudes)
                 normalized_fft = fft_magnitudes / max_magnitude
 
-
+                print(np.ceil((freq.size-1)/2))
                 # filter_frequency = 60  # Specify the frequency you want to filter out
                 # filter_index = np.abs(freq - filter_frequency).argmin()
                 # normalized_fft[filter_index] = 0
@@ -232,7 +285,7 @@ class DataInlet(Inlet):
 
                 self.lines[i+self.channel_count].set_data(freq, normalized_fft)
                 self.ax[i][1].relim()
-                self.ax[i][1].set_xlim(0,125)
+                self.ax[i][1].set_xlim(0,freq[int(np.ceil((freq.size-1)/2))])
                 self.ax[i][1].autoscale_view()
 
 
@@ -267,12 +320,12 @@ def main():
                 and info.channel_format() != pylsl.cf_string:
             if info.type() == "EEG":
                 print('Adding data inlet: ' + info.name())
-                inlets.append(DataInlet(info))
+                inlets.append(DataInlet(info,record))
         else:
             
             print('Don\'t know what to do with stream ' + info.name())
     if not inlets:
-        inlets.append(TestInlet())
+        inlets.append(TestInlet(record))
 
 
     plt.ion()  # Enable interactive mode
