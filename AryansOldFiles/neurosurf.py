@@ -109,16 +109,17 @@ class TestInlet(Inlet):
     
         
 
-    def filter_data(array, frequency, fft_vals):
+    def filter_data(self,array, frequency, fft_vals,sr):
         # Get the number of samples and sampling rate
         N = len(array)
-        sr = 1.0
+        #sr = 1.0
 
         # Compute the frequency axis
         freq = np.fft.fftfreq(N, 1.0/sr)
 
         # Find the index corresponding to the target frequency
         index = np.argmin(np.abs(freq - frequency))
+        print(index,freq[index])
 
         # Set the Fourier coefficient at the target frequency to zero
         fft_vals[index] = 0
@@ -136,10 +137,11 @@ class TestInlet(Inlet):
 
 
         for x in range(self.channel_count):
-            value = np.sin(3*(np.pi * self.time)/1.5)+np.sin(1*(np.pi * self.time)/1.5)
-            print(value)
-            self.time += 1 / self.rate
+            value = np.sin(2*np.pi * self.time*0.5)+np.sin(2*np.pi * self.time*1)+np.sin(2*np.pi * self.time*2)
+            #print(value)
             array[0][x]=value
+
+        self.time += 1 / self.rate
         
 
 
@@ -172,9 +174,12 @@ class TestInlet(Inlet):
 
         self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
         for i in range(0,self.channel_count):
-            self.vals=self.last_viewsize_values[:,i]               
+            self.vals=self.last_viewsize_values[:,i]  
+
 
             fourier = fft(self.vals)
+
+
             sr  = self.rate
             N = len(fourier)
             n = np.arange(N)
@@ -195,8 +200,11 @@ class TestInlet(Inlet):
             self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
             self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
 
+            
 
-            self.vals=self.last_viewsize_values[:,i]                
+
+
+
             self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
             self.ax[i][0].relim()
             self.ax[i][0].autoscale_view()
@@ -309,12 +317,12 @@ class DataInlet(Inlet):
                 max_magnitude = np.max(fft_magnitudes)
                 normalized_fft = fft_magnitudes / max_magnitude
 
-                print(np.ceil((freq.size-1)/2))
+                #print(np.ceil((freq.size-1)/2))
                 # filter_frequency = 60  # Specify the frequency you want to filter out
                 # filter_index = np.abs(freq - filter_frequency).argmin()
                 # normalized_fft[filter_index] = 0
 
-                sig_filtered+ = np.real(np.fft.ifft(normalized_fft))
+                #sig_filtered= np.real(np.fft.ifft(normalized_fft))
 
                 self.lines[i+self.channel_count].set_data(freq, normalized_fft)
                 self.ax[i][1].relim()
@@ -344,7 +352,7 @@ class DataInlet(Inlet):
                 self.ax[i][0].autoscale_view()
                 self.ax[i][0].set_title(f"DATA PLOTS Channel {i}")
                 self.ax[i][1].grid(True)
-                self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
+                self.ax[i][1].set_xlabel('Time (s)', fontsize=12, fontweight='bold')
                 self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
                             
 
