@@ -16,7 +16,7 @@ figure_height = 6
 
 view_size=200
 
-record = True
+record = False
 
 
 
@@ -136,7 +136,7 @@ class TestInlet(Inlet):
 
 
         for x in range(self.channel_count):
-            value = 10*np.sin(2 * math.pi * 60* self.time)
+            value = np.sin(3*(np.pi * self.time)/1.5)+np.sin(1*(np.pi * self.time)/1.5)
             print(value)
             self.time += 1 / self.rate
             array[0][x]=value
@@ -188,15 +188,22 @@ class TestInlet(Inlet):
 
             self.lines[i+self.channel_count].set_data(freq, normalized_fft)
             self.ax[i][1].relim()
-            self.ax[i][1].set_xlim(0,freq[freq.size-1])
+            self.ax[i][1].set_xlim(0,freq[int(np.ceil((freq.size-1)/2))])
             self.ax[i][1].autoscale_view()
-
+            self.ax[i][1].set_title(f"Fourier Channel {i}")
+            self.ax[i][1].grid(True)
+            self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
+            self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
 
 
             self.vals=self.last_viewsize_values[:,i]                
             self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
             self.ax[i][0].relim()
             self.ax[i][0].autoscale_view()
+            self.ax[i][0].set_title(f"DATA PLOTS Channel {i}")
+            self.ax[i][0].grid(True)
+            self.ax[i][0].set_xlabel('Time (S)', fontsize=12, fontweight='bold')
+            self.ax[i][0].set_ylabel('Value', fontsize=12, fontweight='bold')
 
 
 
@@ -307,13 +314,16 @@ class DataInlet(Inlet):
                 # filter_index = np.abs(freq - filter_frequency).argmin()
                 # normalized_fft[filter_index] = 0
 
-                sig_filtered = np.real(np.fft.ifft(normalized_fft))
+                sig_filtered+ = np.real(np.fft.ifft(normalized_fft))
 
                 self.lines[i+self.channel_count].set_data(freq, normalized_fft)
                 self.ax[i][1].relim()
                 self.ax[i][1].set_xlim(0,freq[int(np.ceil((freq.size-1)/2))])
                 self.ax[i][1].autoscale_view()
-
+                self.ax[i][1].set_title(f"Fourier Channel {i}")
+                self.ax[i][1].grid(True)
+                self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
+                self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
 
 
 
@@ -332,7 +342,10 @@ class DataInlet(Inlet):
                 self.ax[i][0].set_ylim(np.amin(self.all_data), np.amax(self.all_data))  # Set the y-range
                 self.ax[i][0].relim()
                 self.ax[i][0].autoscale_view()
-
+                self.ax[i][0].set_title(f"DATA PLOTS Channel {i}")
+                self.ax[i][1].grid(True)
+                self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
+                self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
                             
 
 
