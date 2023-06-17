@@ -137,7 +137,7 @@ class TestInlet(Inlet):
 
 
         for x in range(self.channel_count):
-            value = np.sin(2*np.pi * self.time*0.5)+np.sin(2*np.pi * self.time*1)+np.sin(2*np.pi * self.time*2)
+            value = np.sin(2*np.pi * self.time*0.5)+np.sin(2*np.pi * self.time*1)#+np.sin(2*np.pi * self.time*2)
             #print(value)
             array[0][x]=value
 
