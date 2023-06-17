@@ -108,7 +108,7 @@ class TestInlet(Inlet):
         return sorted_timestamps, sorted_sensor_data
     
         
-    def filter_data(self, array, frequency, sr):
+    def filter_data(self, array, target_frequency, sr):
         for i in range(0,self.channel_count):
             self.vals=self.last_viewsize_values[:,i]  
 
@@ -118,18 +118,15 @@ class TestInlet(Inlet):
             n = np.arange(N)
             ts = 1.0/sr
             T = N/sr
-            freq = n/T
-            fft_magnitudes = np.abs(fourier)
+            freq = n/T # array of all frequencies
+            fft_magnitudes = np.abs(fourier) # array of amplitudes
             max_magnitude = np.max(fft_magnitudes)
             normalized_fft = fft_magnitudes / max_magnitude
 
-        idx = np.where((freq >= frequency - 0.1) & (freq <= frequency + 0.1))
+        idx = np.where((freq >= target_frequency - 0.1) & (freq <= target_frequency + 0.1))
     
         array[idx] = 0
 
-        '''or num in array:
-            if frequency in freq:
-                idx = np.where(freq==frequency)[0][0]'''  
 
 
         
@@ -176,9 +173,14 @@ class TestInlet(Inlet):
             ts = 1.0/sr
             T = N/sr
             freq = n/T
-            self.filter_data(freq, 0.5, sr)
+            
 
             fft_magnitudes = np.abs(fourier)
+
+            #testing filter function
+            self.filter_data(fft_magnitudes, 0.5, sr) #test filter at 0.5
+            self.filter_data(fft_magnitudes, 1, sr) #test filter at 1
+
             max_magnitude = np.max(fft_magnitudes)
             normalized_fft = fft_magnitudes / max_magnitude
 
