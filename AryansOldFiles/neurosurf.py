@@ -137,7 +137,7 @@ class TestInlet(Inlet):
 
 
         for x in range(self.channel_count):
-            value = np.sin(2*np.pi * self.time*0.5)+np.sin(2*np.pi * self.time*1)+np.sin(2*np.pi * self.time*2)
+            value = np.sin(2*np.pi * self.time*1)
             #print(value)
             array[0][x]=value
 
@@ -173,10 +173,13 @@ class TestInlet(Inlet):
         self.last_viewsize_timestamps = self.all_ts[-view_size:]
 
         self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
+        
+        
         for i in range(0,self.channel_count):
             self.vals=self.last_viewsize_values[:,i]  
-
-
+            for x in range(0,10):
+                fourier = fft(self.vals)
+                self.vals = self.filter_data(self.vals,0.5+x/10,fourier,self.rate)
             fourier = fft(self.vals)
 
 
