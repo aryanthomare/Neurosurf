@@ -6,15 +6,15 @@ from matplotlib.animation import FuncAnimation
 import time
 from typing import List
 import pandas as pd
-from numpy.fft import fft, ifft
+#from numpy.fft import fft, ifft
 import csv
-import scipy.signal as signal
+from scipy.fft import rfft,rfftfreq,irfft
 
 plot_duration = 1  # how many seconds of data to show
 figure_width = 12  # width of the figure in inches
 figure_height = 6
 
-view_size=200
+view_size=100
 
 record = False
 
@@ -41,7 +41,7 @@ class Inlet:
 
 
     def message_writer(self,message):
-        # print(f"quote update {message}")
+        # #print(f"quote update {message}")
         with open('self.filename', 'w', encoding='UTF8') as f:
 
             writer = csv.writer(f)
@@ -90,7 +90,7 @@ class TestInlet(Inlet):
 
     
     def message_writer(self,message):
-        # print(f"quote update {message}")
+        # #print(f"quote update {message}")
         with open(self.filename, 'a', encoding='UTF8',newline='') as f:
 
             writer = csv.writer(f)
@@ -107,45 +107,38 @@ class TestInlet(Inlet):
 
         return sorted_timestamps, sorted_sensor_data
     
+    def filter_data(self, target_frequency,tol):
         
 
-    def filter_data(self,array, frequency, fft_vals,sr):
-        # Get the number of samples and sampling rate
-        N = len(array)
-        #sr = 1.0
 
-        # Compute the frequency axis
-        freq = np.fft.fftfreq(N, 1.0/sr)
-
-        # Find the index corresponding to the target frequency
-        index = np.argmin(np.abs(freq - frequency))
-        print(index,freq[index])
-
-        # Set the Fourier coefficient at the target frequency to zero
-        fft_vals[index] = 0
-
-        # Perform inverse FFT to obtain the filtered array
-        filtered_array = np.real(np.fft.ifft(fft_vals))
-
-        return filtered_array
-
-
+        #print("")
         
+        idx = ((self.freq <= target_frequency-tol) | (self.freq >= target_frequency+tol)).astype(int)
+        maxfilter = self.fourier > 10
+        idx = idx * maxfilter
+        #print("IDX: ",idx)
+        
+        
+        # PSD2 = fourier * np.conj(fourier) / self.vals.shape[0]
+        self.fourier = self.fourier * idx
+        #print("FOURIER: ",self.fourier)
+        fr = self.freq * idx
+
+        self.vals = irfft(self.fourier,view_size)
+
+
+
+
     def pull_and_plot(self,*fargs):
         array = np.zeros((1, 3))  # Create a random array of size n by 3 with values between 0 and 1
 
 
-
-        for x in range(self.channel_count):
-            value = np.sin(2*np.pi * self.time*0.5)+np.sin(2*np.pi * self.time*1)#+np.sin(2*np.pi * self.time*2)
+        for i in range(self.channel_count):
+            value = 10*np.sin(2*np.pi * self.time)+10*np.sin(2*np.pi * self.time*2)
             #print(value)
-            array[0][x]=value
+            array[0][i]=value
 
         self.time += 1 / self.rate
-        
-
-
-
 
         times = np.array([time.time()-self.start_time])
 
@@ -174,29 +167,33 @@ class TestInlet(Inlet):
 
         self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
         
-        
+        #print("TIMESTAMP SIZE: ", self.last_viewsize_timestamps.shape)
         for i in range(0,self.channel_count):
-            self.vals=self.last_viewsize_values[:,i]  
-            for x in range(0,10):
-                fourier = fft(self.vals)
-                self.vals = self.filter_data(self.vals,0.5+x/10,fourier,self.rate)
-            fourier = fft(self.vals)
+            self.vals=self.last_viewsize_values[:,i]
+            
+            #rint(self.vals)
 
 
-            sr  = self.rate
-            N = len(fourier)
-            n = np.arange(N)
-            ts = 1.0/sr
-            T = N/sr
-            freq = n/T
-            fft_magnitudes = np.abs(fourier)
-            max_magnitude = np.max(fft_magnitudes)
-            normalized_fft = fft_magnitudes / max_magnitude
+            if self.all_data.shape[0] > view_size:
+                self.dt = 1.0/self.rate
+                self.fourier = np.fft.rfft(self.vals)
 
 
-            self.lines[i+self.channel_count].set_data(freq, normalized_fft)
+                self.freq = np.fft.rfftfreq(view_size, d=1/self.rate)
+                self.L = np.arange(1,np.floor(view_size/2),dtype='int')
+                #print("FSHAPE: ",self.fourier.shape,self.freq.shape)
+
+
+                self.filter_data(1,0.5)
+                self.PSD = self.fourier * np.conj(self.fourier) / view_size
+
+
+            # max_magnitude = np.max(PSD)
+            # normalized_fft = PSD / max_magnitude
+                self.lines[i+self.channel_count].set_data(self.freq[self.L], self.PSD[self.L])
+                self.ax[i][1].set_xlim(self.freq[self.L[0]],self.freq[self.L[-1]])
+
             self.ax[i][1].relim()
-            self.ax[i][1].set_xlim(0,freq[int(np.ceil((freq.size-1)/2))])
             self.ax[i][1].autoscale_view()
             self.ax[i][1].set_title(f"Fourier Channel {i}")
             self.ax[i][1].grid(True)
@@ -204,10 +201,7 @@ class TestInlet(Inlet):
             self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
 
             
-
-
-
-
+            #print("Shape of TS & vals: ",self.last_viewsize_timestamps.shape,self.vals.shape)
             self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
             self.ax[i][0].relim()
             self.ax[i][0].autoscale_view()
@@ -247,11 +241,31 @@ class DataInlet(Inlet):
         self.starttime = time.time()
         
     def message_writer(self,message):
-        # print(f"quote update {message}")
+        # #print(f"quote update {message}")
         with open(self.filename, 'a', encoding='UTF8',newline='') as f:
 
             writer = csv.writer(f)
             writer.writerow(message)
+
+    def filter_data(self, target_frequency,tol):
+        #print("")
+        
+        idx = ((self.freq <= target_frequency-tol) | (self.freq >= target_frequency+tol)).astype(int)
+        #print(idx)
+        fourier = fourier * idx
+        
+        PSD2 = fourier * np.conj(fourier) / self.vals.shape[0]
+
+
+
+        #print(np.real(fourier))
+
+
+
+        self.vals = np.real(ifft(fourier))
+
+
+
 
     def sort_sensor_data(self,timestamps, sensor_data):
         # Get the indices that would sort the timestamps array
@@ -267,8 +281,8 @@ class DataInlet(Inlet):
         vals, ts = self.inlet.pull_chunk()
         #print("!!!: ",vals,ts)
         
-        for x in range(len(ts)):
-            ts[x] = ts[x]-self.starttime
+        for i in range(len(ts)):
+            ts[i] = ts[i]-self.starttime
         
         if ts:
 
@@ -307,29 +321,20 @@ class DataInlet(Inlet):
                 self.vals=self.last_viewsize_values[:,i]               
 
 
-                fourier = fft(self.vals)
+                dt = 1.0/self.normal_rate
+                self.fourier = fft(self.vals,view_size)
+                self.PSD = self.fourier * np.conj(self.fourier) / view_size
+                self.freq = (1/(dt*view_size))*np.arange(view_size)
+                self.L = np.arange(1,np.floor(view_size/2),dtype='int')
+                # max_magnitude = np.max(PSD)
+                # normalized_fft = PSD / max_magnitude
 
-                sr  = self.normal_rate
-                N = len(fourier)
-                n = np.arange(N)
-                ts = 1.0/sr
-                T = N/sr
-                freq = n/T
+                self.lines[i+self.channel_count].set_data(self.freq[self.L], self.PSD[self.L])
+                
 
-                fft_magnitudes = np.abs(fourier)
-                max_magnitude = np.max(fft_magnitudes)
-                normalized_fft = fft_magnitudes / max_magnitude
-
-                #print(np.ceil((freq.size-1)/2))
-                # filter_frequency = 60  # Specify the frequency you want to filter out
-                # filter_index = np.abs(freq - filter_frequency).argmin()
-                # normalized_fft[filter_index] = 0
-
-                #sig_filtered= np.real(np.fft.ifft(normalized_fft))
-
-                self.lines[i+self.channel_count].set_data(freq, normalized_fft)
+                #self.lines[i+self.channel_count].set_data(freq, normalized_fft)
                 self.ax[i][1].relim()
-                self.ax[i][1].set_xlim(0,freq[int(np.ceil((freq.size-1)/2))])
+                self.ax[i][1].set_xlim(self.freq[self.L[0]],self.freq[self.L[-1]])
                 self.ax[i][1].autoscale_view()
                 self.ax[i][1].set_title(f"Fourier Channel {i}")
                 self.ax[i][1].grid(True)
