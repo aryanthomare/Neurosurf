@@ -1,22 +1,37 @@
 import numpy as np
-from numpy.fft import fft, ifft
+import pywt
+import matplotlib.pyplot as plt
 
-# Set the seed for reproducibility (optional)
-np.random.seed(42)
+# Create a 5 Hz wave
+duration = 1.0  # Duration of the wave in seconds
+sampling_rate = 1000  # Number of samples per second
+t = np.linspace(0, duration, int(duration * sampling_rate), endpoint=False)
+frequency = 5  # Frequency of the wave in Hz
+amplitude = 1  # Amplitude of the wave
+wave = amplitude * np.sin(2 * np.pi * frequency * t)
 
-# Create a NumPy array with 100 random values
-random_array = np.random.random(100)
+# Set wavelet transform parameters
+wavelet = 'db4'  # Choose the discrete wavelet (here, we use Daubechies-4)
+level = 1  # Number of decomposition levels (scales)
 
-fourier = fft(random_array)
+# Apply the wavelet transform
+coeffs = pywt.wavedec(wave, wavelet, level=level)
 
-sr = 5
-N = len(fourier)
-n = np.arange(N)
-ts = 1.0/sr
-T = N/sr
-freq = n/T # array of all frequencies
+# Calculate the amplitudes from the wavelet coefficients
+amplitudes = [np.abs(c) for c in coeffs]
 
-fft_magnitudes = np.abs(fourier) # array of amplitudes
+# Plot the amplitude-frequency graph
+plt.figure(figsize=(10, 6))
+for i, amp in enumerate(amplitudes):
+    freq = np.arange(len(amp)) * (sampling_rate / len(amp))
+    plt.plot(freq, amp, label='Scale {}'.format(i+1))
 
-inv = ifft(fft_magnitudes)
-print(inv.shape)
+# Add vertical line at x = 5
+plt.axvline(x=5, color='r', linestyle='--', label='5 Hz')
+
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Amplitude')
+plt.title('Amplitude-Frequency Graph')
+plt.legend()
+plt.grid(True)
+plt.show()
