@@ -14,7 +14,7 @@ plot_duration = 1  # how many seconds of data to show
 figure_width = 12  # width of the figure in inches
 figure_height = 6
 
-view_size=100
+view_size=200
 
 record = False
 
