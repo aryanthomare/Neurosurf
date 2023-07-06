@@ -9,10 +9,12 @@ import csv
 from scipy.fft import rfft,rfftfreq,irfft
 import matplotlib.ticker as ticker
  # how many seconds of data to show
+
+
 figure_width = 12  # width of the figure in inches
 figure_height = 6
 
-view_size=200
+view_size=256
 
 record = False
 
@@ -52,6 +54,12 @@ class Inlet:
         """
         # We don't know what to do with a generic inlet, so we skip it.
         pass
+    def normalize(self,data):
+        max_val = np.max(data)
+        normalized_data = data/max_val
+
+        return np.real(normalized_data)
+    
 
 class TestInlet(Inlet):
     """Class to represent a Test plottable inlet"""
@@ -66,8 +74,6 @@ class TestInlet(Inlet):
     # same time domain as the local lsl_clock()
     # (see https://labstreaminglayer.readthedocs.io/projects/liblsl/ref/enums.html#_CPPv414proc_clocksync)
     # and dejitter timestamps
-
-
 
         self.name = "Test"
         self.channel_count = 3
@@ -237,21 +243,49 @@ class DataInlet(Inlet):
     dtypes = [[], np.float32, np.float64, None, np.int32, np.int16, np.int8, np.int64]
     def __init__(self, info: pylsl.StreamInfo,record):
         super().__init__(info)
+
         self.normal_rate = info.nominal_srate()
+        print(self.normal_rate)
         self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
-        self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
+        self.fig, self.ax = plt.subplots(info.channel_count(),3,figsize=(figure_width, figure_height))
         self.lines = []
+
+        self.categories = ['Delta', 'Theta', 'Alpha', 'Beta','Gamma']
+
         self.name = info.type()
         for j in range(2):
+            
             for i in range(self.channel_count):
                 line, = self.ax[i][j].plot([], [])
                 self.lines.append(line)
+        for i in range(self.channel_count):
+
+            self.bars = self.ax[i][2].bar(self.categories, np.ones(len(self.categories)))
+
+
         self.record = record
         self.all_ts = np.zeros(1)
         self.filename = f"{self.name}_File_{time.time()}.csv"
         self.starttime = time.time()
         self.tick_spacing = 10
+
+        for i in range(self.channel_count):
+            self.ax[i][1].set_title(f"Fourier Channel {i}")
+            self.ax[i][1].grid(True)
+            self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
+            self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
+            self.ax[i][1].xaxis.set_major_locator(ticker.MultipleLocator(self.tick_spacing))    
+
+            self.ax[i][0].set_title(f"DATA PLOTS Channel {i}")
+            self.ax[i][0].grid(True)
+            self.ax[i][0].set_xlabel('Time (s)', fontsize=12, fontweight='bold')
+            self.ax[i][0].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
+
+
+
+
+
     def message_writer(self,message):
         # #print(f"quote update {message}")
         with open(self.filename, 'a', encoding='UTF8',newline='') as f:
@@ -266,7 +300,24 @@ class DataInlet(Inlet):
         # idx = idx * maxfilter        
         self.fourier = self.fourier * idx
         self.vals = irfft(self.fourier,view_size)
+        
+    def get_powers(self):
 
+        """Calculating the frequency spectrum powers
+        Delta: 1-4 hz
+        Theta: 4-8 hz
+        Alpha: 8-13 hz
+        Beta: 13-30 hz
+        Gamma: 30-80 hz
+        """
+        delta = np.sum(np.real(self.PSD * ((self.freq < 4) & (self.freq >= 0.5)).astype(int)))  #1-4 hz
+        theta = np.sum(np.real(self.PSD *((self.freq < 7) & (self.freq >= 4)).astype(int))) #4-8 hz
+        alpha = np.sum(np.real(self.PSD *((self.freq < 13) & (self.freq >= 7)).astype(int))) #8-13 hz
+        beta =  np.sum(np.real(self.PSD *((self.freq < 30) & (self.freq >= 13)).astype(int))) #13-30 hz
+        gamma = np.sum(np.real(self.PSD *((self.freq <= 50) & (self.freq >= 30)).astype(int))) #30-80 hz
+
+        final = (self.normalize([delta,theta,alpha,beta,gamma]))
+        return final
 
 
 
@@ -281,9 +332,7 @@ class DataInlet(Inlet):
         return sorted_timestamps, sorted_sensor_data
 
     def pull_and_plot(self,*fargs):
-        vals, ts = self.inlet.pull_chunk()
-        #print("!!!: ",vals,ts)
-        
+        vals, ts = self.inlet.pull_chunk()        
         for i in range(len(ts)):
             ts[i] = ts[i]-self.starttime
         
@@ -301,7 +350,6 @@ class DataInlet(Inlet):
                 for i in range(combined_array.shape[0]):
                     column = combined_array[i,:]
                     columns.append(column)
-
                 for each in columns:
                     self.message_writer(each)
 
@@ -311,62 +359,44 @@ class DataInlet(Inlet):
 
             self.last_viewsize_values=self.all_data[-view_size:, :]
             self.last_viewsize_timestamps = self.all_ts[-view_size:]
-
             self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
 
             for i in range(0,self.channel_count):
                 self.vals=self.last_viewsize_values[:,i]               
-
-                dt = 1.0/self.normal_rate
                 self.fourier = rfft(self.vals,view_size)
                 self.freq = rfftfreq(view_size, d=1/self.normal_rate)
                 self.L = np.arange(1,np.floor(view_size/2),dtype='int')
                 # max_magnitude = np.max(PSD)
                 # normalized_fft = PSD / 
-                if self.all_data.shape[0] > 201:
-                    print(self.all_data.shape[0])
-                    self.filter_data(60,2)
+                if self.all_data.shape[0] > view_size:
+                    self.filter_data(60,4)
                     self.filter_data(66,2)
+                    self.filter_data(22,2)
+                    # self.filter_data(76,2)
+
                     self.filter_data(120,2)
+                    pass
 
                 self.PSD = self.fourier * np.conj(self.fourier) / view_size
 
-                self.lines[i+self.channel_count].set_data(self.freq[self.L], self.PSD[self.L])
-                self.ax[i][1].set_xlim(self.freq[self.L[0]],self.freq[self.L[-1]])
 
-                #self.lines[i+self.channel_count].set_data(freq, normalized_fft)
-                self.ax[i][1].relim()
-  
-                self.ax[i][1].autoscale_view()
-                self.ax[i][1].set_title(f"Fourier Channel {i}")
-                self.ax[i][1].grid(True)
-                self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
-                self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
-                self.ax[i][1].xaxis.set_major_locator(ticker.MultipleLocator(self.tick_spacing))
-
-
-
-
-
-
-
-
-
-
-
-
-                # self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
-                self.lines[i].set_data(self.last_viewsize_timestamps, self.vals)
-                #print(self.last_viewsize_timestamps[1]-self.last_viewsize_timestamps[0])
-
-                self.ax[i][0].set_ylim(np.amin(self.all_data), np.amax(self.all_data))  # Set the y-range
+                
+                self.lines[i].set_data(np.real(self.last_viewsize_timestamps), np.real(self.vals))
                 self.ax[i][0].relim()
                 self.ax[i][0].autoscale_view()
-                self.ax[i][0].set_title(f"DATA PLOTS Channel {i}")
-                self.ax[i][1].grid(True)
-                self.ax[i][1].set_xlabel('Time (s)', fontsize=12, fontweight='bold')
-                self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
+                     
+
+                self.lines[i+self.channel_count].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
+                self.ax[i][1].set_xlim(self.freq[self.L[0]],50)
+                self.ax[i][1].relim()
+                self.ax[i][1].autoscale_view()
+
+
+                self.ax[i][2].clear()
+                self.ax[i][2].bar(self.categories, self.get_powers())
+
                             
+
 
 
 
@@ -392,7 +422,6 @@ def main():
     while True:
         for inlet in inlets:
             inlet.pull_and_plot()
-
             plt.draw()
             plt.pause(0.1)
 
