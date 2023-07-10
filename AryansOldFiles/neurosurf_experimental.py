@@ -16,7 +16,7 @@ figure_height = 6
 
 view_size=256
 
-record = False
+record = True
 
 
 
@@ -248,20 +248,16 @@ class DataInlet(Inlet):
         print(self.normal_rate)
         self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
-        self.fig, self.ax = plt.subplots(info.channel_count(),3,figsize=(figure_width, figure_height))
+        self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
         self.lines = []
 
         self.categories = ['Delta', 'Theta', 'Alpha', 'Beta','Gamma']
 
         self.name = info.type()
-        for j in range(2):
-            
-            for i in range(self.channel_count):
-                line, = self.ax[i][j].plot([], [])
-                self.lines.append(line)
         for i in range(self.channel_count):
-
-            self.bars = self.ax[i][2].bar(self.categories, np.ones(len(self.categories)))
+            line, = self.ax[i][0].plot([], [])
+            self.lines.append(line)
+            self.bars = self.ax[i][1].bar(self.categories, np.ones(len(self.categories)))
 
 
         self.record = record
@@ -271,16 +267,11 @@ class DataInlet(Inlet):
         self.tick_spacing = 10
 
         for i in range(self.channel_count):
-            self.ax[i][1].set_title(f"Fourier Channel {i}")
-            self.ax[i][1].grid(True)
-            self.ax[i][1].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
-            self.ax[i][1].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
-            self.ax[i][1].xaxis.set_major_locator(ticker.MultipleLocator(self.tick_spacing))    
-
-            self.ax[i][0].set_title(f"DATA PLOTS Channel {i}")
+            self.ax[i][0].set_title(f"Fourier Channel {i}")
             self.ax[i][0].grid(True)
-            self.ax[i][0].set_xlabel('Time (s)', fontsize=12, fontweight='bold')
+            self.ax[i][0].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
             self.ax[i][0].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
+            self.ax[i][0].xaxis.set_major_locator(ticker.MultipleLocator(self.tick_spacing))    
 
 
 
@@ -366,34 +357,21 @@ class DataInlet(Inlet):
                 self.fourier = rfft(self.vals,view_size)
                 self.freq = rfftfreq(view_size, d=1/self.normal_rate)
                 self.L = np.arange(1,np.floor(view_size/2),dtype='int')
-                # max_magnitude = np.max(PSD)
-                # normalized_fft = PSD / 
-                if self.all_data.shape[0] > view_size:
-                    self.filter_data(60,4)
-                    self.filter_data(66,2)
-                    self.filter_data(22,2)
-                    # self.filter_data(76,2)
-
-                    self.filter_data(120,2)
-                    pass
 
                 self.PSD = self.fourier * np.conj(self.fourier) / view_size
 
 
                 
-                self.lines[i].set_data(np.real(self.last_viewsize_timestamps), np.real(self.vals))
+
+
+                self.lines[i].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
+                self.ax[i][0].set_xlim(self.freq[self.L[0]],50)
                 self.ax[i][0].relim()
                 self.ax[i][0].autoscale_view()
-                     
-
-                self.lines[i+self.channel_count].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
-                self.ax[i][1].set_xlim(self.freq[self.L[0]],50)
-                self.ax[i][1].relim()
-                self.ax[i][1].autoscale_view()
 
 
-                self.ax[i][2].clear()
-                self.ax[i][2].bar(self.categories, self.get_powers())
+                self.ax[i][1].clear()
+                self.ax[i][1].bar(self.categories, self.get_powers())
 
                             
 

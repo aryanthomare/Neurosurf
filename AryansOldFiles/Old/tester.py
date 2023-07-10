@@ -1,21 +1,25 @@
-from datetime import datetime
-from pythonosc import dispatcher
-from pythonosc import osc_server
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
 
-ip = "0.0.0.0"
-port = 5000
 
-def eeg_handler(address: str,*args):
-    dateTimeObj = datetime.now()
-    printStr = dateTimeObj.strftime("%Y-%m-%d %H:%M:%S.%f")
-    for arg in args:
-        printStr += ","+str(arg)
-    print(printStr)
+def press(event):
+    print('press', event.key)
     
-if __name__ == "__main__":
-    dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/muse/eeg", eeg_handler)
+    if event.key == 'x':
+        visible = xl.get_visible()
+        xl.set_visible(not visible)
+        fig.canvas.draw()
 
-    server = osc_server.ThreadingOSCUDPServer((ip, port), dispatcher)
-    print("Listening on UDP port "+str(port))
-    server.serve_forever()
+# Fixing random state for reproducibility
+np.random.seed(19680801)
+
+
+fig, ax = plt.subplots()
+
+fig.canvas.mpl_connect('key_press_event', press)
+
+ax.plot(np.random.rand(12), np.random.rand(12), 'go')
+xl = ax.set_xlabel('easy come, easy go')
+ax.set_title('Press a key')
+plt.show()
