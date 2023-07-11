@@ -27,7 +27,7 @@ def list_files(directory):
 print(list_files("."))
 
 # Provide the path to your CSV file
-csv_file_path = "test.csv"
+csv_file_path = "C:\\Users\\aryan\\OneDrive\\Desktop\\PROJECT\\Neurosurf\\AryansOldFiles\\t2.csv"
 
 # Call the function to calculate the sample rate
 result = calculate_sample_rate(csv_file_path)

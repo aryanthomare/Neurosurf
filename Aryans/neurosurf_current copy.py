@@ -244,7 +244,7 @@ class DataInlet(Inlet):
     def __init__(self, info: pylsl.StreamInfo,record):
         super().__init__(info)
 
-        self.normal_rate = info.nominal_srate()
+        self.normal_rate = 895#info.nominal_srate()
         print(self.normal_rate)
         self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
