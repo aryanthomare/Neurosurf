@@ -19,9 +19,15 @@ def calculate_sample_rate(csv_file):
     sample_rate = 1 / avg_time_diff
 
     return sample_rate
+import os
+def list_files(directory):
+    files = os.listdir(directory)
+    return files
+
+print(list_files("."))
 
 # Provide the path to your CSV file
-csv_file_path = 'test.csv'
+csv_file_path = "test.csv"
 
 # Call the function to calculate the sample rate
 result = calculate_sample_rate(csv_file_path)
