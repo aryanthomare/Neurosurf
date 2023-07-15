@@ -16,7 +16,9 @@ counter = 0
 figure_width = 12  # width of the figure in inches
 figure_height = 6
 offset = 0
-
+offsets = [1,2,5,10,50,100,256]
+offset_counter = 0
+lines = [-1,-1]
 
 
 def get_powers(PSD,freq):
@@ -46,10 +48,21 @@ def message_writer(file,message):
 
 
 def click_update_graph():
+    print(lines)
     ax[1].clear()  # Clear the current plot
 
     ax[0].clear() 
-    ax[0].set_title(channels[abs(counter) % 5])
+    ax[0].set_title(f'Channel: {channels[abs(counter) % 5]}, Offset Size: {offsets[offset_counter]}')
+
+    ax[0].axvline(x = lis[:,-1][offset+128], color = 'r', label = 'axvline - full height')
+
+
+
+    if lines[0] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[0]] <= lis[:,-1][offset+256]:
+        ax[0].axvline(x = lis[:,-1][lines[0]], color = 'g', label = 'axvline - full height')
+    if lines[1] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[1]] <= lis[:,-1][offset+256]:
+        ax[0].axvline(x = lis[:,-1][lines[1]], color = 'r', label = 'axvline - full height')
+
  # Clear the current plot
     ax[0].plot(lis[:,-1][offset:offset+256],lis[:,abs(counter) % 5][offset:offset+256])
     fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
@@ -64,47 +77,98 @@ def click_update_graph():
 
 
 def press(event):
-    global counter,offset
+    global counter,offset,lines,offset_counter,offsets
+    print(event.key)
     if event.key == 'left':
         if offset > 0:
-            offset -= 10
-        click_update_graph()
-        
+            offset -=   offsets[offset_counter]
+
+
 
 
     if event.key == 'right':
         if offset < lis.shape[0] - 256:
-            offset += 10
-        click_update_graph()
+            offset += offsets[offset_counter]
 
     if event.key == 'up':
         counter += 1
-        click_update_graph()
+
         
         
     if event.key == 'down':
         counter -= 1
-        click_update_graph()
+
 
 
     if event.key == 'b':
         print("Saved to Blink")
-        fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
-        freq = rfftfreq(256, d=1/256)
-        L = np.arange(1,np.floor(256/2),dtype='int')
-        PSD = fourier * np.conj(fourier) / 256
-        pows = get_powers(PSD,freq)
-        message_writer(f'Neurosurf\\Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
-    
-    if event.key == 'n':
-        print("Saved to Normal")
-        fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
-        freq = rfftfreq(256, d=1/256)
-        L = np.arange(1,np.floor(256/2),dtype='int')
-        PSD = fourier * np.conj(fourier) / 256
-        pows = get_powers(PSD,freq)
-        message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+        if lines == [-1,-1]:
+            print("No start and end")
+            fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
+            freq = rfftfreq(256, d=1/256)
+            L = np.arange(1,np.floor(256/2),dtype='int')
+            PSD = fourier * np.conj(fourier) / 256
+            pows = get_powers(PSD,freq)
+            message_writer(f'Neurosurf\\Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
+        else:
+            if lines[0] != -1 and lines[1] != -1 and lines[1] - lines[0] >= 256:
+                for x in range(abs(lines[1] - lines[0])-256):
+                    fourier = rfft(lis[:,abs(counter) % 5][lines[0]+x:lines[0]+x+256],256)
+                    freq = rfftfreq(256, d=1/256)
+                    L = np.arange(1,np.floor(256/2),dtype='int')
+                    PSD = fourier * np.conj(fourier) / 256
+                    pows = get_powers(PSD,freq)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
 
+
+
+
+    if event.key == 'n':
+        if lines == [-1,-1]:
+
+            print("Saved to Normal")
+            fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
+            freq = rfftfreq(256, d=1/256)
+            L = np.arange(1,np.floor(256/2),dtype='int')
+            PSD = fourier * np.conj(fourier) / 256
+            pows = get_powers(PSD,freq)
+            message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+        else:
+            if lines[0] != -1 and lines[1] != -1 and lines[1] - lines[0] >= 256:
+                for x in range(abs(lines[1] - lines[0])-256):
+                    fourier = rfft(lis[:,abs(counter) % 5][lines[0]+x:lines[0]+x+256],256)
+                    freq = rfftfreq(256, d=1/256)
+                    L = np.arange(1,np.floor(256/2),dtype='int')
+                    PSD = fourier * np.conj(fourier) / 256
+                    pows = get_powers(PSD,freq)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+
+
+
+
+    if event.key == 'z':
+        print("Started")
+        lines[0] = offset+128
+    if event.key == 'x':
+         
+        print("ended")
+        lines[1] = offset+128
+
+
+    if event.key == 'c':
+        lines = [-1,-1]
+
+
+
+    if event.key == '+':
+        if offset_counter < len(offsets)-1:
+            offset_counter += 1
+
+
+    if event.key == '-':
+        if offset_counter > 0:
+            offset_counter -= 1
+    click_update_graph()
 
 def trim_file(file):
     #open csv file and save rows in a list
@@ -126,28 +190,22 @@ def sort_sensor_data(timestamps, sensor_data):
 
         return sorted_sensor_data
 
-print
 
-filename = 't3.csv'
+
+filename = 't6.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
 
 fig, ax = plt.subplots(1,2,figsize=(figure_width, figure_height))
 
 
-ax[0].set_title(channels[abs(counter) % 5])
 fig.canvas.mpl_connect('key_press_event', press)
-# Set up the button subplot
-
 
 fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
 freq = rfftfreq(256, d=1/256)
 L = np.arange(1,np.floor(256/2),dtype='int')
 PSD = fourier * np.conj(fourier) / 256
-ax[1].plot(np.real(freq[L][0:50]), np.real(PSD[L][0:50]))        
-        
 
-ax[0].plot(lis[:,-1][offset:offset+256],lis[:,abs(counter) % 5][offset:offset+256])
-#ax[1].set_xlim(freq[L[0]],50)
+click_update_graph()
 
 plt.show()

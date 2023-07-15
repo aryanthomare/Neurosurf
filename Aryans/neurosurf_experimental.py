@@ -218,9 +218,9 @@ def main():
             
             print('Don\'t know what to do with stream ' + info.name())
     if not inlets:
-        inlets.append(TestInlet(record))
+        print("UNDETECTED")
 
-
+ 
     plt.ion()  # Enable interactive mode
     
     while True:

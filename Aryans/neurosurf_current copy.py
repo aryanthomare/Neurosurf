@@ -300,6 +300,13 @@ class DataInlet(Inlet):
         # idx = idx * maxfilter        
         self.fourier = self.fourier * idx
         self.vals = irfft(self.fourier,view_size)
+
+    def remove_upper(self):
+        idx = (self.freq <= 50).astype(int)
+        print(idx)
+        self.fourier = self.fourier * idx
+        self.vals = irfft(self.fourier,view_size)
+
         
     def get_powers(self):
 
@@ -368,6 +375,7 @@ class DataInlet(Inlet):
                 self.L = np.arange(1,np.floor(view_size/2),dtype='int')
                 # max_magnitude = np.max(PSD)
                 # normalized_fft = PSD / 
+                self.remove_upper()
                 if self.all_data.shape[0] > view_size:
                     self.filter_data(60,4)
                     self.filter_data(66,2)
@@ -387,7 +395,6 @@ class DataInlet(Inlet):
                      
 
                 self.lines[i+self.channel_count].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
-                self.ax[i][1].set_xlim(self.freq[self.L[0]],50)
                 self.ax[i][1].relim()
                 self.ax[i][1].autoscale_view()
 
