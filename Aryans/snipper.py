@@ -10,6 +10,7 @@ from scipy.fft import rfft,rfftfreq,irfft
 import matplotlib.ticker as ticker
  # how many seconds of data to show
 from matplotlib.widgets import Button
+from matplotlib.gridspec import GridSpec
 
 channels = ['TP9', 'AF7', 'AF8', 'TP10', 'Right AUX']
 counter = 0
@@ -19,7 +20,18 @@ offset = 0
 offsets = [1,2,5,10,50,100,256]
 offset_counter = 0
 lines = [-1,-1]
+categories = ['Delta', 'Theta', 'Alpha', 'Beta','Gamma']
 
+print("""
+    Press the left and right arrow keys to move the graph
+    Press the up and down arrow keys to change the channel
+    Press b to save the current graph to the blink csv file
+    Press n to save the current graph to the calm csv file
+    Press m to save the current graph to the focus csv file
+    Press z to add a start line
+    Press x to add an end line
+    Press c to remove all lines
+      """)
 
 def get_powers(PSD,freq):
 
@@ -40,7 +52,6 @@ def get_powers(PSD,freq):
     return final
 
 def message_writer(file,message):
-    # #print(f"quote update {message}")
     with open(file, 'a', encoding='UTF8',newline='') as f:
 
         writer = csv.writer(f)
@@ -48,37 +59,44 @@ def message_writer(file,message):
 
 
 def click_update_graph():
-    print(lines)
-    ax[1].clear()  # Clear the current plot
+    
+    ax1.cla()
+    ax2.cla()
+    ax3.cla()
 
-    ax[0].clear() 
-    ax[0].set_title(f'Channel: {channels[abs(counter) % 5]}, Offset Size: {offsets[offset_counter]}')
+    ax2.clear()  # Clear the current plot
 
-    ax[0].axvline(x = lis[:,-1][offset+128], color = 'r', label = 'axvline - full height')
+    ax1.clear() 
+    ax1.set_title(f'Channel: {channels[abs(counter) % 5]}, Offset Size: {offsets[offset_counter]}')
 
 
 
-    if lines[0] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[0]] <= lis[:,-1][offset+256]:
-        ax[0].axvline(x = lis[:,-1][lines[0]], color = 'g', label = 'axvline - full height')
-    if lines[1] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[1]] <= lis[:,-1][offset+256]:
-        ax[0].axvline(x = lis[:,-1][lines[1]], color = 'r', label = 'axvline - full height')
+
 
  # Clear the current plot
-    ax[0].plot(lis[:,-1][offset:offset+256],lis[:,abs(counter) % 5][offset:offset+256])
+    ax1.plot(lis[:,-1][offset:offset+256],lis[:,abs(counter) % 5][offset:offset+256])
     fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
     freq = rfftfreq(256, d=1/256)
     #L = np.arange(1,np.floor(256/2),dtype='int')
     PSD = fourier * np.conj(fourier) / 256
 
 
-    ax[1].plot(np.real(freq[L][0:50]), np.real(PSD[L][0:50]))        
-        
+    ax2.plot(np.real(freq[L][0:50]), np.real(PSD[L][0:50]))        
+    
+    ax3.clear()
+    ax3.bar(categories,get_powers(PSD,freq))
+
+    ax1.axvline(x = lis[:,-1][offset+128], color = 'r', label = 'axvline - full height')
+    if lines[0] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[0]] <= lis[:,-1][offset+256]:
+        ax1.axvline(x = lis[:,-1][lines[0]], color = 'g', label = 'axvline - full height')
+    if lines[1] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[1]] <= lis[:,-1][offset+256]:
+        ax1.axvline(x = lis[:,-1][lines[1]], color = 'r', label = 'axvline - full height')
+
     plt.draw()
 
 
 def press(event):
     global counter,offset,lines,offset_counter,offsets
-    print(event.key)
     if event.key == 'left':
         if offset > 0:
             offset -=   offsets[offset_counter]
@@ -101,9 +119,7 @@ def press(event):
 
 
     if event.key == 'b':
-        print("Saved to Blink")
         if lines == [-1,-1]:
-            print("No start and end")
             fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
             freq = rfftfreq(256, d=1/256)
             L = np.arange(1,np.floor(256/2),dtype='int')
@@ -125,8 +141,6 @@ def press(event):
 
     if event.key == 'n':
         if lines == [-1,-1]:
-
-            print("Saved to Normal")
             fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
             freq = rfftfreq(256, d=1/256)
             L = np.arange(1,np.floor(256/2),dtype='int')
@@ -141,17 +155,17 @@ def press(event):
                     L = np.arange(1,np.floor(256/2),dtype='int')
                     PSD = fourier * np.conj(fourier) / 256
                     pows = get_powers(PSD,freq)
-                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\n{channels[abs(counter) % 5]}.csv',pows)
+
+                    #message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
 
 
 
 
     if event.key == 'z':
-        print("Started")
         lines[0] = offset+128
     if event.key == 'x':
          
-        print("ended")
         lines[1] = offset+128
 
 
@@ -192,11 +206,17 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 't6.csv'
+filename = 't7.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
+fig = plt.figure(figsize=(10, 6))
 
-fig, ax = plt.subplots(1,2,figsize=(figure_width, figure_height))
+
+#fig, ax = plt.subplots(1,3,figsize=(figure_width, figure_height))
+grid = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[2, 1])
+ax1 = fig.add_subplot(grid[0, :])
+ax2 = fig.add_subplot(grid[1, 0])
+ax3 = fig.add_subplot(grid[1, 1])
 
 
 fig.canvas.mpl_connect('key_press_event', press)
