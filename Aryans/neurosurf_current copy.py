@@ -248,7 +248,7 @@ class DataInlet(Inlet):
         print(self.normal_rate)
         self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
-        self.fig, self.ax = plt.subplots(info.channel_count(),3,figsize=(figure_width, figure_height))
+        self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
         self.lines = []
 
         self.categories = ['Delta', 'Theta', 'Alpha', 'Beta','Gamma']
@@ -259,10 +259,6 @@ class DataInlet(Inlet):
             for i in range(self.channel_count):
                 line, = self.ax[i][j].plot([], [])
                 self.lines.append(line)
-        for i in range(self.channel_count):
-
-            self.bars = self.ax[i][2].bar(self.categories, np.ones(len(self.categories)))
-
 
         self.record = record
         self.all_ts = np.zeros(1)
@@ -379,7 +375,6 @@ class DataInlet(Inlet):
                 if self.all_data.shape[0] > view_size:
                     self.filter_data(60,4)
                     self.filter_data(66,2)
-                    self.filter_data(22,2)
                     # self.filter_data(76,2)
 
                     self.filter_data(120,2)
@@ -398,11 +393,6 @@ class DataInlet(Inlet):
                 self.ax[i][1].relim()
                 self.ax[i][1].autoscale_view()
 
-
-                self.ax[i][2].clear()
-                self.ax[i][2].bar(self.categories, self.get_powers())
-
-                            
 
 
 

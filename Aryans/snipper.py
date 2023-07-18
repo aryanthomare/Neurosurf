@@ -206,7 +206,7 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 't7.csv'
+filename = 'calm3.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
 fig = plt.figure(figsize=(10, 6))
