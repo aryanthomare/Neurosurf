@@ -303,7 +303,14 @@ class DataInlet(Inlet):
         self.fourier = self.fourier * idx
         self.vals = irfft(self.fourier,view_size)
 
-        
+    def twenty_point_avg(self):
+        avg = np.zeros(self.vals.shape)
+        for i in range(0,self.vals.shape[0]-20):
+            avg[i] = np.mean(self.vals[i:i+20])
+        return avg
+
+
+
     def get_powers(self):
 
         """Calculating the frequency spectrum powers

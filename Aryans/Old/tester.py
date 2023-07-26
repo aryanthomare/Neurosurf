@@ -1,25 +1,14 @@
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 
+arr = np.asarray([x for x in range(100)])
+numbers_series = pd.Series(arr)
+window_size = 20
+def twenty_point_avg(lis):
+     windows = numbers_series.rolling(window_size)
+     moving_averages = windows.mean()
+     moving_averages_list = moving_averages.tolist()
+     final_list = moving_averages_list[window_size - 1:]
+     return final_list
 
-def press(event):
-    print('press', event.key)
-    
-    if event.key == 'x':
-        visible = xl.get_visible()
-        xl.set_visible(not visible)
-        fig.canvas.draw()
-
-# Fixing random state for reproducibility
-np.random.seed(19680801)
-
-
-fig, ax = plt.subplots()
-
-fig.canvas.mpl_connect('key_press_event', press)
-
-ax.plot(np.random.rand(12), np.random.rand(12), 'go')
-xl = ax.set_xlabel('easy come, easy go')
-ax.set_title('Press a key')
-plt.show()
+print(twenty_point_avg(arr))

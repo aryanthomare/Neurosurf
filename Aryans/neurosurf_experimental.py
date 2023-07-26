@@ -155,13 +155,12 @@ class DataInlet(Inlet):
         if ts:
 
 
-
             new = np.array(vals)
             times = np.array(ts)
 
 
 
-
+            print(times[-1])
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             self.all_ts = np.concatenate((self.all_ts, times), axis=0)
 
