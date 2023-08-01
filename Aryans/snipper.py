@@ -11,6 +11,7 @@ import matplotlib.ticker as ticker
  # how many seconds of data to show
 from matplotlib.widgets import Button
 from matplotlib.gridspec import GridSpec
+import pandas as pd
 
 channels = ['TP9', 'AF7', 'AF8', 'TP10', 'Right AUX']
 counter = 0
@@ -32,6 +33,21 @@ print("""
     Press x to add an end line
     Press c to remove all lines
       """)
+
+
+def pt_filter(data, window):
+    num_rows = data.shape[0] - window + 1
+    num_columns = data.shape[1]
+
+    total = np.zeros((num_rows, num_columns))
+
+    for i in range(num_columns):
+        row = np.convolve(data[:, i], np.ones(window), 'valid') / window
+        total[:, i] = row
+
+    return total
+
+
 
 def get_powers(PSD,freq):
 
@@ -206,10 +222,11 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 'focus.csv'
+filename = 'yulucalm.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
-fig = plt.figure(figsize=(10, 6))
+lis = pt_filter(lis,1)
+fig = plt.figure(figsize=(10, 5))
 
 
 #fig, ax = plt.subplots(1,3,figsize=(figure_width, figure_height))
