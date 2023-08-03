@@ -1,14 +1,17 @@
-import numpy as np
 import pandas as pd
 
-arr = np.asarray([x for x in range(100)])
-numbers_series = pd.Series(arr)
-window_size = 20
-def twenty_point_avg(lis):
-     windows = numbers_series.rolling(window_size)
-     moving_averages = windows.mean()
-     moving_averages_list = moving_averages.tolist()
-     final_list = moving_averages_list[window_size - 1:]
-     return final_list
+# Read the input CSV file
+input_file = 'Me_Calm.csv'
+df = pd.read_csv(input_file, header=None)
 
-print(twenty_point_avg(arr))
+# Calculate the sum of each row
+row_sums = df.sum(axis=1)
+
+# Divide each value by the sum and create a new DataFrame
+normalized_df = df.divide(row_sums, axis=0)
+
+# Write the normalized DataFrame to a new CSV file
+output_file = 'output.csv'
+normalized_df.to_csv(output_file, index=False, header=False)
+
+print("Normalized data written to", output_file)

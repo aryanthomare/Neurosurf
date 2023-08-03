@@ -64,7 +64,8 @@ def get_powers(PSD,freq):
     beta =  np.sum(np.real(PSD *((freq < 30) & (freq >= 13)).astype(int))) #13-30 hz
     gamma = np.sum(np.real(PSD *((freq <= 50) & (freq >= 30)).astype(int))) #30-80 hz
 
-    final = [delta,theta,alpha,beta,gamma]
+    t=delta+theta+alpha+beta+gamma
+    final = [delta,theta,alpha,beta,gamma]/t
     return final
 
 def message_writer(file,message):
@@ -107,7 +108,6 @@ def click_update_graph():
         ax1.axvline(x = lis[:,-1][lines[0]], color = 'g', label = 'axvline - full height')
     if lines[1] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[1]] <= lis[:,-1][offset+256]:
         ax1.axvline(x = lis[:,-1][lines[1]], color = 'r', label = 'axvline - full height')
-
     plt.draw()
 
 
@@ -222,10 +222,10 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 'yulucalm.csv'
+filename = 'Yulu_Sudo.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
-lis = pt_filter(lis,1)
+lis = pt_filter(lis,5)
 fig = plt.figure(figsize=(10, 5))
 
 
@@ -240,6 +240,12 @@ fig.canvas.mpl_connect('key_press_event', press)
 
 fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
 freq = rfftfreq(256, d=1/256)
+
+
+freq_res = freq[1] - freq[0]
+
+
+
 L = np.arange(1,np.floor(256/2),dtype='int')
 PSD = fourier * np.conj(fourier) / 256
 
