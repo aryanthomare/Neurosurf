@@ -171,9 +171,30 @@ def press(event):
                     L = np.arange(1,np.floor(256/2),dtype='int')
                     PSD = fourier * np.conj(fourier) / 256
                     pows = get_powers(PSD,freq)
-                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\n{channels[abs(counter) % 5]}.csv',pows)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
 
                     #message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+
+    if event.key == 'm':
+        if lines == [-1,-1]:
+            fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
+            freq = rfftfreq(256, d=1/256)
+            L = np.arange(1,np.floor(256/2),dtype='int')
+            PSD = fourier * np.conj(fourier) / 256
+            pows = get_powers(PSD,freq)
+            message_writer(f'Neurosurf\\Aryans\\Exported_Values\\concentrated\\con{channels[abs(counter) % 5]}.csv',pows)
+        else:
+            if lines[0] != -1 and lines[1] != -1 and lines[1] - lines[0] >= 256:
+                for x in range(abs(lines[1] - lines[0])-256):
+                    fourier = rfft(lis[:,abs(counter) % 5][lines[0]+x:lines[0]+x+256],256)
+                    freq = rfftfreq(256, d=1/256)
+                    L = np.arange(1,np.floor(256/2),dtype='int')
+                    PSD = fourier * np.conj(fourier) / 256
+                    pows = get_powers(PSD,freq)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\concentrated\\con{channels[abs(counter) % 5]}.csv',pows)
+
+                    #message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+
 
 
 
@@ -222,10 +243,10 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 'Yulu_Sudo.csv'
+filename = 'Viki_CM_2.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
-lis = pt_filter(lis,5)
+lis = pt_filter(lis,2)
 fig = plt.figure(figsize=(10, 5))
 
 

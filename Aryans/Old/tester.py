@@ -1,7 +1,8 @@
 import pandas as pd
+import os
 
 # Read the input CSV file
-input_file = 'Me_Calm.csv'
+input_file = 'C:\\Users\\aryan\\OneDrive\\Desktop\\PROJECT\\Neurosurf\\Aryans\\Old\\Me_Calm.csv'
 df = pd.read_csv(input_file, header=None)
 
 # Calculate the sum of each row
