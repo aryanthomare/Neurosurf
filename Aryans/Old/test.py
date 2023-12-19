@@ -1,40 +1,39 @@
-import csv
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import time
 
-def calculate_sample_rate(csv_file):
-    timestamps = []
-    with open(csv_file, 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            # Assuming the timestamp is in the last column
-            timestamp = float(row[-1])
-            timestamps.append(timestamp)
+# Generate some example 3D data
+np.random.seed(42)
+num_points = 100
+x = np.random.rand(num_points)
+y = np.random.rand(num_points)
+z = np.random.rand(num_points)
 
-    # Calculate the time difference between consecutive timestamps
-    time_diffs = [timestamps[i] - timestamps[i-1] for i in range(1, len(timestamps))]
+# Create a 3D scatter plot
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+scatter = ax.scatter(x, y, z, c='b', marker='o', label='Random Points')
 
-    # Calculate the average time difference in seconds
-    avg_time_diff = sum(time_diffs) / len(time_diffs)
+# Set labels for the axes
+ax.set_xlabel('X Label')
+ax.set_ylabel('Y Label')
+ax.set_zlabel('Z Label')
 
-    # Calculate the sample rate in Hz
-    sample_rate = 1 / avg_time_diff
+# Add a legend
+ax.legend()
 
-    return sample_rate
-import os
-def list_files(directory):
-    files = os.listdir(directory)
-    return files
+# Update and redraw the plot every second
+num_updates = 50  # Number of updates
+for i in range(num_updates):
+    new_point = np.random.rand(3)  # Generate new random point
+    x = np.append(x, new_point[0])
+    y = np.append(y, new_point[1])
+    z = np.append(z, new_point[2])
+    
+    scatter._offsets3d = (x, y, z)  # Update scatter data
+    
+    plt.pause(1)  # Pause for 1 second
 
-print(list_files("."))
-
-# Provide the path to your CSV file
-csv_file_path = "C:\\Users\\aryan\\OneDrive\\Desktop\\PROJECT\\Neurosurf\\AryansOldFiles\\t2.csv"
-
-# Call the function to calculate the sample rate
-result = calculate_sample_rate(csv_file_path)
-
-# Print the result
-print("Sample rate: {:.2f} Hz".format(result))
-
-
-
-
+# Show the final plot
+plt.show()

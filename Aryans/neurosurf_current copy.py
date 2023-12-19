@@ -11,8 +11,8 @@ import matplotlib.ticker as ticker
  # how many seconds of data to show
 
 
-figure_width = 12  # width of the figure in inches
-figure_height = 6
+figure_width = 15  # width of the figure in inches
+figure_height = 10
 
 view_size=256
 
@@ -264,7 +264,7 @@ class DataInlet(Inlet):
         self.all_ts = np.zeros(1)
         self.filename = f"{self.name}_File_{time.time()}.csv"
         self.starttime = time.time()
-        self.tick_spacing = 10
+        self.tick_spacing = 20
 
         for i in range(self.channel_count):
             self.ax[i][1].set_title(f"Fourier Channel {i}")
@@ -297,11 +297,11 @@ class DataInlet(Inlet):
         self.fourier = self.fourier * idx
         self.vals = irfft(self.fourier,view_size)
 
-    def remove_upper(self):
-        idx = (self.freq <= 50).astype(int)
-        print(idx)
-        self.fourier = self.fourier * idx
-        self.vals = irfft(self.fourier,view_size)
+    # def remove_upper(self):
+    #     idx = (self.freq <= 50).astype(int)
+    #     print(idx)
+    #     self.fourier = self.fourier * idx
+    #     self.vals = irfft(self.fourier,view_size)
 
     def twenty_point_avg(self):
         avg = np.zeros(self.vals.shape)
@@ -366,39 +366,35 @@ class DataInlet(Inlet):
 
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             self.all_ts = np.concatenate((self.all_ts, times), axis=0)
+            if self.all_data.shape[0] > view_size:
+                self.last_viewsize_values=self.all_data[-view_size:, :]
+                self.last_viewsize_timestamps = self.all_ts[-view_size:]
+                self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
 
-            self.last_viewsize_values=self.all_data[-view_size:, :]
-            self.last_viewsize_timestamps = self.all_ts[-view_size:]
-            self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
+                for i in range(0,self.channel_count):
+                    self.vals=self.last_viewsize_values[:,i]               
+                    self.fourier = rfft(self.vals,view_size)
+                    self.freq = rfftfreq(view_size, d=1/self.normal_rate)
+                    self.L = np.arange(1,np.floor(view_size/2),dtype='int')
+                    # max_magnitude = np.max(PSD)
+                    # normalized_fft = PSD / 
+                    #self.remove_upper()
+                    if self.all_data.shape[0] > view_size:
+                        self.filter_data(210,1)
+                        pass
 
-            for i in range(0,self.channel_count):
-                self.vals=self.last_viewsize_values[:,i]               
-                self.fourier = rfft(self.vals,view_size)
-                self.freq = rfftfreq(view_size, d=1/self.normal_rate)
-                self.L = np.arange(1,np.floor(view_size/2),dtype='int')
-                # max_magnitude = np.max(PSD)
-                # normalized_fft = PSD / 
-                self.remove_upper()
-                if self.all_data.shape[0] > view_size:
-                    self.filter_data(60,4)
-                    self.filter_data(66,2)
-                    # self.filter_data(76,2)
-
-                    self.filter_data(120,2)
-                    pass
-
-                self.PSD = self.fourier * np.conj(self.fourier) / view_size
+                    self.PSD = self.fourier * np.conj(self.fourier) / view_size
 
 
-                
-                self.lines[i].set_data(np.real(self.last_viewsize_timestamps), np.real(self.vals))
-                self.ax[i][0].relim()
-                self.ax[i][0].autoscale_view()
-                     
+                    
+                    self.lines[i].set_data(np.real(self.last_viewsize_timestamps), np.real(self.vals))
+                    self.ax[i][0].relim()
+                    self.ax[i][0].autoscale_view()
+                        
 
-                self.lines[i+self.channel_count].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
-                self.ax[i][1].relim()
-                self.ax[i][1].autoscale_view()
+                    self.lines[i+self.channel_count].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
+                    self.ax[i][1].relim()
+                    self.ax[i][1].autoscale_view()
 
 
 

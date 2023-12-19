@@ -89,7 +89,6 @@ def click_update_graph():
 
 
 
-
  # Clear the current plot
     ax1.plot(lis[:,-1][offset:offset+256],lis[:,abs(counter) % 5][offset:offset+256])
     fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
@@ -108,6 +107,20 @@ def click_update_graph():
         ax1.axvline(x = lis[:,-1][lines[0]], color = 'g', label = 'axvline - full height')
     if lines[1] != -1 and lis[:,-1][offset] <= lis[:,-1][lines[1]] <= lis[:,-1][offset+256]:
         ax1.axvline(x = lis[:,-1][lines[1]], color = 'r', label = 'axvline - full height')
+
+
+
+
+
+
+    
+    ax4.cla()
+    ax4.axvline(x = offset, color = 'r', label = 'axvline - full height')
+
+    #ax4.plot(np.linspace(0,size-1,size),A_G_ratio[:,abs(counter) % 5])
+    ax4.plot(np.linspace(0,A_G_ratio.shape[0]-1,A_G_ratio.shape[0]),A_G_ratio[:,abs(counter) % 5])
+    #ax4.plot(np.linspace(0,size-1,size),D_G_ratio[:,abs(counter) % 5])
+
     plt.draw()
 
 
@@ -221,6 +234,32 @@ def press(event):
             offset_counter -= 1
     click_update_graph()
 
+def ratio_graph():
+    global counter,offset,lines
+    size = lis[:,abs(counter) % 5].shape[0] - 256
+    A_G_ratio = np.zeros((size,5))
+    B_G_ratio = np.zeros((size,5))
+    D_G_ratio = np.zeros((size,5))
+    T_G_ratio = np.zeros((size,5))
+    for c in range(5):
+        for x in range(size):
+
+            fourier = rfft(lis[:,c][x:x+256],256)
+            freq = rfftfreq(256, d=1/256)
+            L = np.arange(1,np.floor(256/2),dtype='int')
+            PSD = fourier * np.conj(fourier) / 256
+
+
+            pows = get_powers(PSD,freq)
+            D_G_ratio[x,c] = pows[0]/pows[4]
+            T_G_ratio[x,c] = pows[4]/pows[1]
+            A_G_ratio[x,c] = pows[4]/pows[2]
+            B_G_ratio[x,c] = pows[4]/pows[3]
+    
+
+    return pt_filter(A_G_ratio,2),pt_filter(B_G_ratio,2),pt_filter(D_G_ratio,2),pt_filter(T_G_ratio,2)
+
+
 def trim_file(file):
     #open csv file and save rows in a list
     with open(file, 'r') as file:
@@ -243,7 +282,7 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 'Viki_CM_2.csv'
+filename = 'mich2.csv'
 lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
 lis = pt_filter(lis,2)
@@ -251,25 +290,25 @@ fig = plt.figure(figsize=(10, 5))
 
 
 #fig, ax = plt.subplots(1,3,figsize=(figure_width, figure_height))
-grid = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[2, 1])
+grid = GridSpec(3, 2, height_ratios=[1, 1, 1])
 ax1 = fig.add_subplot(grid[0, :])
 ax2 = fig.add_subplot(grid[1, 0])
 ax3 = fig.add_subplot(grid[1, 1])
+ax4 = fig.add_subplot(grid[2, :])
 
 
 fig.canvas.mpl_connect('key_press_event', press)
-
 fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
 freq = rfftfreq(256, d=1/256)
-
-
 freq_res = freq[1] - freq[0]
-
-
-
 L = np.arange(1,np.floor(256/2),dtype='int')
 PSD = fourier * np.conj(fourier) / 256
 
+
+
+
+ 
+A_G_ratio,B_G_ratio,D_G_ratio,T_G_ratio = ratio_graph()
 click_update_graph()
 
 plt.show()
