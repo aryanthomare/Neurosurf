@@ -217,7 +217,7 @@ class DataInlet(Inlet):
                 print("!",self.scatter_data.shape)
                 x = self.scatter_data[:, 4][-512:]
                 y = self.scatter_data[:, 3][-512:]
-                z = self.scatter_data[:, 0][-512:]
+                z = self.scatter_data[:, 2][-512:]
                     
                 self.scatter._offsets3d = (x, y, z)
                 if self.scatter_data.shape[0] > 512:
