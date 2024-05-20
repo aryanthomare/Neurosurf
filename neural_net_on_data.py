@@ -3,14 +3,14 @@ import tensorflow as tf
 from numpy import genfromtxt
 print(tf.__version__)
 print("hi")
+import os
+print(os.listdir())
 
-mnist = tf.keras.datasets.mnist
+x_train= genfromtxt('Neurosurf\\Aryans\\files_for_training\\bn_tp9_train.csv', delimiter=',')
+y_train= genfromtxt('Neurosurf\\Aryans\\files_for_training\\bn_tp9_ans_1.csv', delimiter=',')
 
-
-x_train= genfromtxt('Aryans\\files_for_training\\bn_tp9_train.csv', delimiter=',')
-y_train= genfromtxt('Aryans\\files_for_training\\bn_tp9_ans_1.csv', delimiter=',')
-x_test = genfromtxt('Aryans\\files_for_training\\bn_tp9_test.csv', delimiter=',')
-y_test = genfromtxt('Aryans\\files_for_training\\bn_tp9_ans_2.csv', delimiter=',')
+x_test = genfromtxt('Neurosurf\\Aryans\\files_for_training\\bn_tp9_test.csv', delimiter=',')
+y_test = genfromtxt('Neurosurf\\Aryans\\files_for_training\\bn_tp9_ans_2.csv', delimiter=',')
 
 
 print(x_train[0])
@@ -32,4 +32,4 @@ model.fit(x_train, y_train, epochs=3)
 val_loss, val_acc = model.evaluate(x_test, y_test)
 print(val_loss)
 print(val_acc)
-model.save('epic_num_reader.model')
+model.save('test_model_v1.model')

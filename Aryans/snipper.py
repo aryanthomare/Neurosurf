@@ -86,8 +86,7 @@ def click_update_graph():
     ax1.clear() 
     ax1.set_title(f'Channel: {channels[abs(counter) % 5]}, Offset Size: {offsets[offset_counter]}')
 
-
-
+    # ax1.set_ylim([-200,200])
 
  # Clear the current plot
     ax1.plot(lis[:,-1][offset:offset+256],lis[:,abs(counter) % 5][offset:offset+256])
@@ -97,7 +96,7 @@ def click_update_graph():
     PSD = fourier * np.conj(fourier) / 256
 
 
-    ax2.plot(np.real(freq[L][0:50]), np.real(PSD[L][0:50]))        
+    ax2.plot(np.real(freq[L][0:80]), np.real(PSD[L][0:80]))        
     
     ax3.clear()
     ax3.bar(categories,get_powers(PSD,freq))
@@ -118,8 +117,11 @@ def click_update_graph():
     ax4.axvline(x = offset, color = 'r', label = 'axvline - full height')
 
     #ax4.plot(np.linspace(0,size-1,size),A_G_ratio[:,abs(counter) % 5])
-    ax4.plot(np.linspace(0,A_G_ratio.shape[0]-1,A_G_ratio.shape[0]),A_G_ratio[:,abs(counter) % 5])
-    #ax4.plot(np.linspace(0,size-1,size),D_G_ratio[:,abs(counter) % 5])
+    #ax4.plot(np.linspace(0,A_G_ratio.shape[0]-1,A_G_ratio.shape[0]),A_G_ratio[:,abs(counter) % 5])
+    ax4.plot(np.linspace(0,D_G_ratio.shape[0]-1,D_G_ratio.shape[0]),D_G_ratio[:,abs(counter) % 5])
+
+
+
 
     plt.draw()
 
@@ -148,13 +150,14 @@ def press(event):
 
 
     if event.key == 'b':
+        print("saved blink")
         if lines == [-1,-1]:
             fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
             freq = rfftfreq(256, d=1/256)
             L = np.arange(1,np.floor(256/2),dtype='int')
             PSD = fourier * np.conj(fourier) / 256
             pows = get_powers(PSD,freq)
-            message_writer(f'Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
+            message_writer(f'Neurosurf\\Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
         else:
             if lines[0] != -1 and lines[1] != -1 and lines[1] - lines[0] >= 256:
                 for x in range(abs(lines[1] - lines[0])-256):
@@ -163,19 +166,21 @@ def press(event):
                     L = np.arange(1,np.floor(256/2),dtype='int')
                     PSD = fourier * np.conj(fourier) / 256
                     pows = get_powers(PSD,freq)
-                    message_writer(f'Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\blinks\\blinks{channels[abs(counter) % 5]}.csv',pows)
 
 
 
 
     if event.key == 'n':
+        print("saved normal")
+
         if lines == [-1,-1]:
             fourier = rfft(lis[:,abs(counter) % 5][offset:offset+256],256)
             freq = rfftfreq(256, d=1/256)
             L = np.arange(1,np.floor(256/2),dtype='int')
             PSD = fourier * np.conj(fourier) / 256
             pows = get_powers(PSD,freq)
-            message_writer(f'Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+            message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
         else:
             if lines[0] != -1 and lines[1] != -1 and lines[1] - lines[0] >= 256:
                 for x in range(abs(lines[1] - lines[0])-256):
@@ -184,7 +189,7 @@ def press(event):
                     L = np.arange(1,np.floor(256/2),dtype='int')
                     PSD = fourier * np.conj(fourier) / 256
                     pows = get_powers(PSD,freq)
-                    message_writer(f'Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
 
                     #message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
 
@@ -195,7 +200,7 @@ def press(event):
             L = np.arange(1,np.floor(256/2),dtype='int')
             PSD = fourier * np.conj(fourier) / 256
             pows = get_powers(PSD,freq)
-            message_writer(f'Aryans\\Exported_Values\\concentrated\\con{channels[abs(counter) % 5]}.csv',pows)
+            message_writer(f'Neurosurf\\Aryans\\Exported_Values\\concentrated\\con{channels[abs(counter) % 5]}.csv',pows)
         else:
             if lines[0] != -1 and lines[1] != -1 and lines[1] - lines[0] >= 256:
                 for x in range(abs(lines[1] - lines[0])-256):
@@ -204,7 +209,7 @@ def press(event):
                     L = np.arange(1,np.floor(256/2),dtype='int')
                     PSD = fourier * np.conj(fourier) / 256
                     pows = get_powers(PSD,freq)
-                    message_writer(f'Aryans\\Exported_Values\\concentrated\\con{channels[abs(counter) % 5]}.csv',pows)
+                    message_writer(f'Neurosurf\\Aryans\\Exported_Values\\concentrated\\con{channels[abs(counter) % 5]}.csv',pows)
 
                     #message_writer(f'Neurosurf\\Aryans\\Exported_Values\\normal\\normal{channels[abs(counter) % 5]}.csv',pows)
 
@@ -282,8 +287,8 @@ def sort_sensor_data(timestamps, sensor_data):
 
 
 
-filename = 'athome.csv'
-lis = trim_file('Aryans\\DataFiles\\' + filename)
+filename = 'b3.csv'
+lis = trim_file('Neurosurf\\Aryans\\DataFiles\\' + filename)
 lis = sort_sensor_data(lis[:,-1],lis)
 lis = pt_filter(lis,2)
 fig = plt.figure(figsize=(10, 5))

@@ -14,12 +14,13 @@ from sklearn.metrics import accuracy_score
 import joblib
 
 
+
 figure_width = 12  # width of the figure in inches
 figure_height = 6
 
 view_size=256
 
-record = True
+record = False
 
 
 
@@ -74,20 +75,16 @@ class DataInlet(Inlet):
         # self.model = tf.keras.models.load_model('Aryans\\test_model_v1.model')
         self.clf2 = joblib.load("model_af7.pkl")
 
-        self.normal_rate = 895#info.nominal_srate()
+        self.normal_rate = 256#info.nominal_srate()
         print(self.normal_rate)
+        self.outputs = ['blink','normal']
         self.channel_count = info.channel_count()
         self.all_data = np.zeros((1, info.channel_count()))
-        self.fig, self.ax = plt.subplots(info.channel_count(),2,figsize=(figure_width, figure_height))
         self.lines = []
 
         self.categories = ['Delta', 'Theta', 'Alpha', 'Beta','Gamma']
 
         self.name = info.type()
-        for i in range(self.channel_count):
-            line, = self.ax[i][0].plot([], [])
-            self.lines.append(line)
-            self.bars = self.ax[i][1].bar(self.categories, np.ones(len(self.categories)))
 
 
         self.record = record
@@ -95,20 +92,6 @@ class DataInlet(Inlet):
         self.filename = f"{self.name}_File_{time.time()}.csv"
         self.starttime = time.time()
         self.tick_spacing = 10
-
-        self.model = joblib.load("model.pkl")
-
-
-
-        for i in range(self.channel_count):
-            self.ax[i][0].set_title(f"Fourier Channel {i}")
-            self.ax[i][0].grid(True)
-            self.ax[i][0].set_xlabel('Freq (Hz)', fontsize=12, fontweight='bold')
-            self.ax[i][0].set_ylabel('Amplitude', fontsize=12, fontweight='bold')
-            self.ax[i][0].xaxis.set_major_locator(ticker.MultipleLocator(self.tick_spacing))    
-
-
-
 
 
     def message_writer(self,message):
@@ -145,6 +128,23 @@ class DataInlet(Inlet):
         final = [delta,theta,alpha,beta,gamma]/t
         return final
 
+    def get_rolling_avg(self,v):
+        return np.mean(np.absolute(v[-256:]))
+
+    def get_blink(self):
+        return self.clf2.predict(self.get_powers)
+    
+    def check_sensors(self):
+        f = True
+        for i in range(0,self.channel_count):
+            v=self.last_viewsize_values[:,i]
+            avg = self.get_rolling_avg(v)
+            if avg > 400:
+                f = False
+                print(avg)
+                print(f"BAD SENSOR: {i}")
+        return f
+
 
 
     def sort_sensor_data(self,timestamps, sensor_data):
@@ -158,19 +158,17 @@ class DataInlet(Inlet):
         return sorted_timestamps, sorted_sensor_data
 
     def pull_and_plot(self,*fargs):
-        vals, ts = self.inlet.pull_chunk()        
+        vals, ts = self.inlet.pull_chunk()   
         for i in range(len(ts)):
             ts[i] = ts[i]-self.starttime
         
         if ts:
-
 
             new = np.array(vals)
             times = np.array(ts)
 
 
 
-            print(times[-1])
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             self.all_ts = np.concatenate((self.all_ts, times), axis=0)
 
@@ -178,8 +176,11 @@ class DataInlet(Inlet):
             self.last_viewsize_timestamps = self.all_ts[-view_size:]
             self.last_viewsize_timestamps, self.last_viewsize_values = self.sort_sensor_data(self.last_viewsize_timestamps, self.last_viewsize_values)
 
-            for i in range(0,self.channel_count):
-                self.vals=self.last_viewsize_values[:,i]               
+
+            self.vals=self.last_viewsize_values[:,0]   
+
+            if self.check_sensors():
+                print(self.get_blink())
                 self.fourier = rfft(self.vals,view_size)
                 self.freq = rfftfreq(view_size, d=1/self.normal_rate)
                 self.L = np.arange(1,np.floor(view_size/2),dtype='int')
@@ -187,34 +188,8 @@ class DataInlet(Inlet):
                 self.PSD = self.fourier * np.conj(self.fourier) / view_size
 
 
-                pows = self.get_powers()
-                pows = pows.reshape(1,5)
+                # print(self.get_blink())
 
-
-                predictions = self.clf2.predict(pows)
-                print("PREDICTIONS: ",predictions)
-
-                p=self.get_powers()
-                print(pows)
-                self.lines[i].set_data(np.real(self.freq[self.L]), np.real(self.PSD[self.L]))
-                self.ax[i][0].set_xlim(self.freq[self.L[0]],50)
-                self.ax[i][0].relim()
-                self.ax[i][0].autoscale_view()
-
-
-                self.ax[i][1].clear()
-                self.ax[i][1].bar(self.categories, self.get_powers())
-
-            if self.record:
-
-                combined_array = np.hstack((new, times[:, np.newaxis]))
-                columns = []
-                for i in range(combined_array.shape[0]):
-                    column = combined_array[i,:]
-                    columns.append(column)
-                for each in columns:
-                    self.message_writer(each)
-    
 
 
 
@@ -236,13 +211,11 @@ def main():
         print("UNDETECTED")
 
  
-    plt.ion()  # Enable interactive mode
     
     while True:
         for inlet in inlets:
             inlet.pull_and_plot()
-            plt.draw()
-            plt.pause(0.1)
+  
 
 if __name__ == '__main__':
     main()

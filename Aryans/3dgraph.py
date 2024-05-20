@@ -11,6 +11,11 @@ import matplotlib.ticker as ticker
  # how many seconds of data to show
 from mpl_toolkits.mplot3d import Axes3D
 from colour import Color
+from sklearn import svm
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import joblib
+
 
 figure_width = 12  # width of the figure in inches
 figure_height = 6
@@ -72,33 +77,46 @@ class DataInlet(Inlet):
     def __init__(self, info: pylsl.StreamInfo,record):
         super().__init__(info)
 
+
+        # create an inlet and connect it to the outlet we found earlier.
         self.normal_rate = info.nominal_srate()
         print(self.normal_rate)
         self.channel_count = info.channel_count()
+
+
+        #creates mega data array, 1 by channel count
         self.all_data = np.zeros((1, info.channel_count()))
 
+        self.clf2 = joblib.load("model_af7.pkl")
 
 
 
 
         self.categories = ['Delta', 'Theta', 'Alpha', 'Beta','Gamma']
-
         self.name = info.type()
             
         self.freq = rfftfreq(256, d=1/256)
         self.record = record
+
+
+        #an array of all the timestamps
         self.all_ts = np.zeros(1)
         self.filename = f"{self.name}_File_{time.time()}.csv"
         self.starttime = time.time()
+
+        #saving all ratios of the right type
         self.all_ratios = np.zeros(1)
 
+        #data for figure in n x 
         self.scatter_data = np.empty((0,5))
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
+
         self.scatter = self.ax.scatter([], [], [], c='b', marker='o')
         self.ax.set_xlabel('X Label')
-        self.ax.set_ylabel('Y Label')
+        self.ax.set_ylabel('Y Label') 
         self.ax.set_zlabel('Z Label')
+
         self.colors = self.grad((107, 237, 146),(255, 64, 0),512)
 
 
@@ -179,7 +197,6 @@ class DataInlet(Inlet):
     def sort_sensor_data(self,timestamps, sensor_data):
         # Get the indices that would sort the timestamps array
         sorted_indices = np.argsort(timestamps, axis=0)
-
         # Sort the timestamps and sensor data arrays based on the sorted indices
         sorted_timestamps = timestamps[sorted_indices]
         sorted_sensor_data = sensor_data[sorted_indices]
@@ -197,9 +214,12 @@ class DataInlet(Inlet):
             times = np.array(ts)
             self.all_data = np.concatenate((self.all_data, new), axis=0)
             self.all_ts = np.concatenate((self.all_ts, times), axis=0)
-            #WHICH ONE TO USE
 
+            #WHICH ONE TO USE 0=AF7?
             self.vals=self.all_data[:,0][-256-new.shape[0]:]
+            print("AD SHAPE: ",self.all_data.shape)
+            print("vals SHAPE: ",self.vals.shape)
+
             if self.all_data.shape[0] > 256:
                 #print(self.vals.shape,new.shape)
 
@@ -212,9 +232,9 @@ class DataInlet(Inlet):
                     powers = self.get_powers(PSD,self.freq)
                     print(self.scatter_data.shape,powers.shape)
                     self.scatter_data = np.concatenate((self.scatter_data, [powers]), axis=0)
-
-
-                print("!",self.scatter_data.shape)
+                    predictions = self.clf2.predict([powers])
+                    print("PREDICTIONS: ",predictions , " ",powers)
+                #print("!",self.scatter_data.shape)
                 x = self.scatter_data[:, 4][-512:]
                 y = self.scatter_data[:, 3][-512:]
                 z = self.scatter_data[:, 2][-512:]
